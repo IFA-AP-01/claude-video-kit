@@ -1,0 +1,11 @@
+{
+  "song": "audio/out/voice_master.wav",
+  "lyrics": "analysis/lines.txt",
+  "language": "vi",
+  "whisper_prompt": "",
+  "whisper_model": "large-v3-turbo",
+  "device": "cpu",
+  "threads": 4,
+  "spoken": {},
+  "sections": {}
+}
