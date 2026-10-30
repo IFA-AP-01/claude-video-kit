@@ -1,0 +1,68 @@
+:root {
+  --tz-ink: #262626;
+  --tz-blue: #2f7fd8;
+  --tz-blue-deep: #1f5fa8;
+  --tz-orange: #f39a1e;
+  --tz-yellow: #f2c230;
+  --tz-green: #3fb24f;
+  --tz-red: #d8463a;
+  --tz-paper: #ffffff;
+  --tz-font: "Nunito", sans-serif;
+}
+.tz-shot { position: absolute; inset: 0; overflow: hidden; }
+.tz-cam { position: absolute; inset: 0; }
+.tz-bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+.tz-far, .tz-mid, .tz-near { position: absolute; inset: 0; }
+.tz-near { pointer-events: none; }
+.tz-fg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+.tz-grain { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; mix-blend-mode: soft-light; opacity: 0.32; pointer-events: none; z-index: 40; }
+.tz-actor { position: absolute; bottom: -70px; width: 560px; height: 859px; }
+.tz-actor.sm { width: 440px; height: 675px; bottom: -40px; }
+.tz-actor.lg { width: 700px; height: 1073px; bottom: -150px; }
+.tz-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+
+.tz-title-card { position: absolute; inset: 0; background: var(--tz-blue); display: flex; align-items: center; justify-content: center; }
+.tz-kinetic {
+  font: 900 150px/1.02 var(--tz-font); color: #fff; text-transform: uppercase; text-align: center;
+  max-width: 1600px; letter-spacing: 0.01em; text-shadow: 0 8px 0 rgba(0, 0, 0, 0.16);
+}
+.tz-word { display: inline-block; white-space: nowrap; }
+.tz-ch { display: inline-block; }
+
+.tz-bubble {
+  position: absolute; max-width: 700px; padding: 26px 42px; background: var(--tz-paper); color: var(--tz-ink);
+  font: 800 46px/1.18 var(--tz-font); border-radius: 44px; filter: drop-shadow(0 12px 22px rgba(30, 40, 60, 0.22));
+}
+.tz-bubble::after { content: ""; position: absolute; left: 72px; bottom: -38px; border-style: solid; border-width: 40px 30px 0 0; border-color: var(--tz-paper) transparent transparent transparent; }
+.tz-bubble[data-tail="right"]::after { left: auto; right: 72px; border-width: 40px 0 0 30px; }
+
+.tz-pill {
+  position: absolute; padding: 8px 54px 14px; background: var(--tz-paper); color: #111; border-radius: 999px;
+  font: 900 104px/1.05 var(--tz-font); text-transform: uppercase; white-space: nowrap;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.22);
+}
+
+.tz-name {
+  position: absolute; left: 96px; bottom: 110px; display: flex; align-items: center; gap: 22px;
+  padding: 18px 40px 18px 22px; background: var(--tz-paper); border-radius: 22px; box-shadow: 0 8px 0 rgba(0, 0, 0, 0.2);
+  font-family: var(--tz-font); color: var(--tz-ink);
+}
+.tz-name .ico { width: 78px; height: 78px; border-radius: 50%; background: var(--tz-blue); display: flex; align-items: center; justify-content: center; }
+.tz-name .role { display: block; font: 800 30px/1.1 var(--tz-font); color: var(--tz-blue-deep); text-transform: uppercase; letter-spacing: 0.04em; }
+.tz-name .who { display: block; font: 900 54px/1.05 var(--tz-font); text-transform: uppercase; }
+
+.tz-pin {
+  position: absolute; left: 80px; top: 72px; display: flex; align-items: center; gap: 14px;
+  padding: 12px 34px 12px 18px; background: var(--tz-paper); border-radius: 18px; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+  font: 900 50px/1 var(--tz-font); color: var(--tz-ink); text-transform: uppercase;
+}
+
+.tz-board { position: absolute; background: #fbfcfd; border: 10px solid #9aa6b2; border-radius: 12px; box-shadow: 0 14px 0 rgba(0, 0, 0, 0.18); }
+.tz-board svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.tz-logo { position: absolute; bottom: 34px; font: 900 34px/1 var(--tz-font); color: rgba(255, 255, 255, 0.9); text-transform: uppercase; letter-spacing: 0.06em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 14px rgba(0, 0, 0, 0.45); }
+.tz-stage { position: absolute; inset: 0; }
+.tz-whip { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+.tz-whip i { position: absolute; display: block; border-radius: 999px; background: linear-gradient(90deg, rgba(255,255,255,0), #fff 30%, #fff 70%, rgba(255,255,255,0)); }
+.tz-actor.kid { width: 380px; height: 583px; bottom: -28px; }
+.tz-burst-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Cast sheet</title>
+<link rel="stylesheet" href="../film/assets/lib/toon.css" />
+<style>
+body { margin: 0; background: #e9edf1; font: 700 18px system-ui, sans-serif; color: #262626; }
+h2 { margin: 24px 24px 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 24px; }
+.cell { width: 220px; background: #8fa3b8; border-radius: 10px; overflow: hidden; }
+.cell .stage { position: relative; width: 220px; height: 300px; overflow: hidden; }
+.cell .stage .a { position: absolute; left: 10px; top: 10px; width: 200px; height: 307px; }
+.cell p { margin: 0; padding: 6px 10px; background: #fff; }
+.bgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 24px 40px; }
+.bgs img { width: 100%; display: block; border-radius: 8px; }
+</style>
+</head>
+<body>
+<h2>Cast (rest pose, mouth shapes)</h2>
+<div class="row" id="cast"></div>
+<h2>Poses</h2>
+<div class="row" id="poses"></div>
+<h2>Backgrounds</h2>
+<div class="bgs" id="bgs"></div>
+<script src="../film/assets/lib/gsap.min.js"></script>
+<script src="../film/assets/lib/toon.js"></script>
+<script src="../film/assets/lib/cast.js"></script>
+<script>
+function cell(parent, label) {
+  const c = document.createElement("div"); c.className = "cell";
+  c.innerHTML = '<div class="stage"><div class="a"></div></div><p>' + label + "</p>";
+  parent.appendChild(c); return c.querySelector(".a");
+}
+const shapes = ["rest", "closed", "open", "round", "wide"];
+Object.keys(TOON.CAST).forEach((k) => {
+  shapes.forEach((m) => {
+    const rig = TOON.actor(cell(document.getElementById("cast"), k + " · " + m), TOON.CAST[k]);
+    for (const s in rig.mouth) rig.mouth[s].setAttribute("opacity", s === m ? 1 : 0);
+  });
+});
+const ORIG = { armL: "182 520", armR: "418 520", foreL: "150 712", foreR: "450 712", head: "300 440" };
+const keys = Object.keys(TOON.CAST);
+Object.keys(TOON.POSES).forEach((p, i) => {
+  const rig = TOON.actor(cell(document.getElementById("poses"), p + " · " + keys[i % keys.length]), TOON.CAST[keys[i % keys.length]]);
+  const v = TOON.POSES[p];
+  for (const part in ORIG) gsap.set(rig[part], { rotation: v[part], svgOrigin: ORIG[part] });
+});
+["office", "server", "street", "factory", "lab", "studio"].forEach((b) => {
+  const im = document.createElement("img"); im.src = "../film/assets/bg/" + b + ".svg"; im.title = b;
+  document.getElementById("bgs").appendChild(im);
+});
+</script>
+</body>
+</html>

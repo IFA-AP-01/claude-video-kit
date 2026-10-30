@@ -24,6 +24,7 @@ Read these before the first tool call of any visual job. Each page covers one ar
 | Beat-driven kinetic-type film, music + SFX, render/mix/finish scripts | `scenario-kinetic-film` |
 | Three.js music video (deterministic frames, Chrome → ffmpeg) | `threejs-music-video` + `lyric-beat-analysis`, `camera-motion`, `lyric-staging`, `toon-look` |
 | Vox-style paper explainer short with voice-over | `paper-vox-short` |
+| Infographics-Show-style 16:9 cartoon explainer (talking puppets, bubbles, stat pills, charts) from voice + script | `cartoon-explainer` |
 | Store screenshots / boards / header image | this playbook (`STORE-ASSETS.md`) + the project's own board page |
 
 ## First five minutes of any job

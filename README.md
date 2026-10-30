@@ -13,6 +13,7 @@ Portable Claude Code skills and working rules for video, motion films, store scr
 | `skills/lyric-beat-analysis` | stems, word-level lyric alignment, beat grid |
 | `skills/camera-motion`, `lyric-staging`, `toon-look` | camera moves on the beat, lyrics as objects, toon materials |
 | `skills/paper-vox-short` | 9:16 paper-cutout explainer shorts with voice-over |
+| `skills/cartoon-explainer` | 16:9 Infographics-Show-style cartoon explainers: SVG puppets with lip-sync, bubbles, stat pills, charts (HyperFrames + GSAP) |
 
 ## New machine
 ```bash

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="../film/assets/lib/toon.css" />
+<style>
+body { margin: 0; background: #8fa3b8; width: 1920px; }
+.row { display: flex; }
+.cell { position: relative; width: 480px; height: 640px; overflow: hidden; border-right: 2px solid #6d7f93; border-bottom: 2px solid #6d7f93; }
+.cell .a { position: absolute; left: 40px; top: 20px; width: 400px; height: 614px; }
+</style>
+</head>
+<body>
+<div id="g"></div>
+<script src="../film/assets/lib/gsap.min.js"></script>
+<script src="../film/assets/lib/toon.js"></script>
+<script src="../film/assets/lib/cast.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const cast = (q.get("cast") || "exec,scientist,worker,guy").split(",");
+const poses = (q.get("poses") || "rest,explain,point,shrug").split(",");
+const g = document.getElementById("g");
+const z = +(q.get("zoom") || 1);
+if (z !== 1) document.body.style.width = (480 * z * poses.length) + "px";
+for (const k of cast) {
+  const row = document.createElement("div"); row.className = "row"; g.appendChild(row);
+  poses.forEach((p, i) => {
+    const c = document.createElement("div"); c.className = "cell"; c.innerHTML = '<div class="a"></div>';
+    if (z !== 1) { c.style.width = 480 * z + "px"; c.style.height = 640 * z + "px"; Object.assign(c.firstChild.style, { left: 40 * z + "px", top: 20 * z + "px", width: 400 * z + "px", height: 614 * z + "px" }); } row.appendChild(c);
+    const rig = TOON.actor(c.querySelector(".a"), TOON.CAST[k]);
+    const tl = gsap.timeline({ paused: true });
+    TOON.pose(tl, rig, 0, p, 0.01);
+    if (i === 1) for (const s in rig.mouth) rig.mouth[s].setAttribute("opacity", s === "open" ? 1 : 0);
+    tl.seek(1);
+    if (q.get("nod")) gsap.set(rig.head, { y: +q.get("nod") });
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #8fa3b8; }
+  </style>
+  <div id="root" data-composition-id="__ID__" data-width="1920" data-height="1080">
+    <div id="__ID__-stage" class="tz-stage"></div>
+  </div>
+  <script>
+    (function () {
+      const S = TOON.scene("__ID__");
+      const tl = gsap.timeline({ paused: true });
+      const root = document.getElementById("__ID__-stage");
+      const BGS = ["office", "server", "street", "factory", "lab"];
+      const CAST = Object.keys(TOON.CAST);
+      const seed = Array.from("__ID__").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+      const groups = [];
+      S.lines.forEach((l, i) => {
+        const g = groups[groups.length - 1];
+        if (g && l.end - g.start < 2.2) g.end = l.end, g.words.push(...l.words);
+        else groups.push({ start: i === 0 ? 0 : S.cut(i), end: l.end, words: l.words.slice() });
+      });
+      if (!groups.length) groups.push({ start: 0, end: S.dur, words: [] });
+
+      const shots = groups.map((g, k) => {
+        const shot = document.createElement("div");
+        shot.className = "tz-shot";
+        shot.id = "__ID__-shot" + k;
+        const cam = document.createElement("div");
+        cam.className = "tz-cam";
+        const far = document.createElement("div");
+        far.className = "tz-far";
+        const mid = document.createElement("div");
+        mid.className = "tz-mid";
+        const bg = document.createElement("img");
+        bg.className = "tz-bg";
+        bg.alt = "";
+        bg.src = "assets/bg/" + BGS[(seed + k) % BGS.length] + ".soft.png";
+        const a = document.createElement("div");
+        a.className = "tz-actor";
+        a.style.left = (k % 2 ? 1060 : 300) + "px";
+        a.setAttribute("data-cast", CAST[(seed + k) % CAST.length]);
+        far.append(bg);
+        mid.append(a);
+        cam.append(far, mid);
+        shot.append(cam);
+        root.append(shot);
+        const t1 = k + 1 < groups.length ? groups[k + 1].start : S.dur;
+        const rig = TOON.actor(a);
+        TOON.idle(tl, rig, g.start, t1, seed + k);
+        TOON.talk(tl, rig, g.words, { from: g.start, to: t1 });
+        TOON.gestures(tl, rig, g.words, seed + k);
+        TOON.parallax(tl, shot, g.start, t1, { dx: k % 2 ? -60 : 60, to: 1.08, origin: (k % 2 ? 62 : 38) + "% 40%" });
+        return shot;
+      });
+      TOON.cuts(tl, shots, groups.map((g) => g.start));
+      window.__timelines["__ID__"] = tl;
+    })();
+  </script>
+</template>
