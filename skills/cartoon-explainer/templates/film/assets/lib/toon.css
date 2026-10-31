@@ -66,3 +66,27 @@
 .tz-whip i { position: absolute; display: block; border-radius: 999px; background: linear-gradient(90deg, rgba(255,255,255,0), #fff 30%, #fff 70%, rgba(255,255,255,0)); }
 .tz-actor.kid { width: 380px; height: 583px; bottom: -28px; }
 .tz-burst-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+
+/* Vertical 1080×1920 (FORMAT=vertical, build_film sets body[data-format]). Landscape presets fill the
+   height (3413 px wide); --bg-left picks the crop (default: centre) and leaves room to pan. Shorts UI
+   covers the top ~200 px, the right ~150 px from y 900 and the bottom ~380 px: keep text out of those. */
+body[data-format="vertical"] .tz-bg, body[data-format="vertical"] .tz-fg { width: 3413px; height: 1920px; left: var(--bg-left, -1166px); }
+body[data-format="vertical"] .tz-grain { width: 1080px; height: 1920px; object-fit: cover; }
+body[data-format="vertical"] .tz-burst-svg { width: 1080px; height: 1920px; }
+body[data-format="vertical"] .tz-kinetic { font-size: 124px; max-width: 920px; }
+body[data-format="vertical"] .tz-bubble { max-width: 780px; font-size: 50px; }
+body[data-format="vertical"] .tz-pill { font-size: 92px; }
+body[data-format="vertical"] .tz-name { left: 60px; bottom: 560px; }
+body[data-format="vertical"] .tz-pin { left: 60px; top: 230px; }
+body[data-format="vertical"] .tz-logo { bottom: auto; top: 214px; -webkit-text-stroke: 7px rgba(28, 30, 48, 0.55); paint-order: stroke fill; }
+.tz-plane { position: absolute; inset: 0; }
+.tz-plane > svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+/* Karaoke captions (CAPTIONS=1): one chunk of 1–4 words at a time, active word lit. */
+.tz-caps { position: absolute; left: 70px; right: 150px; top: 1250px; height: 300px; pointer-events: none; z-index: 45; }
+body[data-format="landscape"] .tz-caps { left: 260px; right: 260px; top: 850px; height: 180px; }
+.tz-cap { position: absolute; left: 0; right: 0; top: 0; text-align: center; font: 900 82px/1.08 var(--tz-font); color: #fff; text-transform: uppercase; letter-spacing: 0.01em;
+  -webkit-text-stroke: 14px rgba(28, 30, 48, 0.92); paint-order: stroke fill;
+  text-shadow: 0 7px 0 rgba(20, 24, 40, 0.6), 0 0 22px rgba(20, 24, 40, 0.45); opacity: 0; }
+.tz-cap .w { display: inline-block; margin: 0 0.12em; }
+.tz-cap .w.hot { color: #ffd84a; }

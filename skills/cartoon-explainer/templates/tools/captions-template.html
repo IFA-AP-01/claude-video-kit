@@ -1,0 +1,57 @@
+<template>
+  <style>
+    #captions-root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  </style>
+  <div id="captions-root" data-composition-id="captions">
+    <div id="captions-box" class="tz-caps"></div>
+  </div>
+  <script>
+    (function () {
+      const D = window.TOON_DATA;
+      const tl = gsap.timeline({ paused: true });
+      const box = document.getElementById("captions-box");
+      const MAX_WORDS = 3, MAX_CHARS = 15, GAP = 0.45;
+      const chunks = [];
+      for (const l of D.lines) {
+        let cur = null;
+        l.words.forEach((w, i) => {
+          const len = cur ? cur.words.map((x) => x.w).join(" ").length + 1 + w.w.length : w.w.length;
+          const gap = cur ? w.start - cur.words[cur.words.length - 1].end : 0;
+          if (!cur || cur.words.length >= MAX_WORDS || len > MAX_CHARS || gap > GAP || cur.stop) {
+            cur = { words: [] };
+            chunks.push(cur);
+          }
+          cur.words.push(w);
+          cur.stop = /[.,!?;:…]$/.test(w.w);
+        });
+      }
+      chunks.forEach((c, k) => {
+        const el = document.createElement("div");
+        el.className = "tz-cap";
+        el.id = "captions-c" + k;
+        const spans = c.words.map((w) => {
+          const s = document.createElement("span");
+          s.className = "w";
+          s.textContent = w.w.replace(/[.,;:]+$/, "");
+          el.appendChild(s);
+          el.appendChild(document.createTextNode(" "));
+          return s;
+        });
+        box.appendChild(el);
+        const t0 = Math.max(0, c.words[0].start - 0.06);
+        const next = chunks[k + 1];
+        const t1 = Math.min(c.words[c.words.length - 1].end + 0.35, next ? Math.max(t0 + 0.2, next.words[0].start - 0.06) : Infinity);
+        tl.fromTo(el, { opacity: 0, scale: 0.86, y: 18 }, { opacity: 1, scale: 1, y: 0, duration: 0.14, ease: "back.out(2)" }, t0);
+        tl.to(el, { opacity: 0, duration: 0.08, ease: "none" }, t1 - 0.08);
+        c.words.forEach((w, i) => {
+          const s = spans[i];
+          const off = i + 1 < c.words.length ? c.words[i + 1].start : w.end + 0.1;
+          const on = Math.max(t0, w.start - 0.03), offAt = Math.max(on + 0.09, Math.min(off, t1) - 0.04);
+          tl.fromTo(s, { color: "#ffffff", scale: 1 }, { color: "#ffd84a", scale: 1.1, duration: 0.08, ease: "power2.out", immediateRender: i === 0 }, on);
+          tl.to(s, { color: "#ffffff", scale: 1, duration: 0.1, ease: "power1.out" }, offAt);
+        });
+      });
+      window.__timelines["captions"] = tl;
+    })();
+  </script>
+</template>

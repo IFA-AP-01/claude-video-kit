@@ -35,10 +35,12 @@ function chromePath() {
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json" };
 const index = readFileSync(join(FILM, "index.html"), "utf8");
 const head = index.match(/<head>([\s\S]*?)<\/head>/)[1];
+const [SW, SH] = (index.match(/id="root"[^>]*data-width="(\d+)" data-height="(\d+)"/) || [0, 1920, 1080]).slice(1).map(Number);
 const hosts = [...index.matchAll(/data-composition-src="compositions\/([^"]+)\.html"/g)].map((m) => m[1]);
 
-const harness = `<!doctype html><html><head>${head}</head><body>
-<div id="stage" style="position:absolute;inset:0;width:1920px;height:1080px" data-width="1920" data-height="1080"></div>
+const bodyTag = (index.match(/<body[^>]*>/) || ["<body>"])[0];
+const harness = `<!doctype html><html><head>${head}</head>${bodyTag}
+<div id="stage" style="position:absolute;inset:0;width:${SW}px;height:${SH}px" data-width="${SW}" data-height="${SH}"></div>
 <script>
 window.__timelines = {};
 window.mountScene = async function (id) {
@@ -74,7 +76,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080 });
+  await page.setViewport({ width: SW, height: SH });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/__cues.html`, { waitUntil: "load" });

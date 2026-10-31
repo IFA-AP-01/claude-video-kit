@@ -1,0 +1,73 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #8fa3b8; }
+    .in-fill { position: absolute; inset: 0; }
+    .in-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+    #intro-dark { position: absolute; inset: 0; background: #1d2430; }
+  </style>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+    <div id="intro-stage" class="tz-stage">
+      <div id="intro-s0" class="tz-shot">
+        <div class="tz-cam" id="intro-cam0">
+          <div class="tz-far">
+            <img class="tz-bg" src="assets/bg/street.soft.png" alt="" />
+            <svg id="intro-sky" class="in-svg" viewBox="0 0 1920 1080"></svg>
+          </div>
+          <div class="tz-mid">
+            <svg id="intro-birds" class="in-svg" viewBox="0 0 1920 1080"></svg>
+            <div id="intro-walk" class="in-fill"><div id="intro-me" class="tz-actor" data-cast="guy" style="left: 0px"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="intro-dark"></div>
+    <div id="intro-whip" class="tz-whip"></div>
+  </div>
+  <script>
+    (function () {
+      const S = TOON.scene("intro");
+      const tl = gsap.timeline({ paused: true });
+      const $ = (id) => document.getElementById("intro-" + id);
+      const K = KIT("intro-", tl);
+      const T = S.dur;
+
+      $("sky").innerHTML =
+        '<defs><radialGradient id="intro-sun"><stop offset="0" stop-color="#fff4c8" stop-opacity="0.95"/><stop offset="0.35" stop-color="#ffd98a" stop-opacity="0.5"/><stop offset="1" stop-color="#ffc870" stop-opacity="0"/></radialGradient></defs>' +
+        '<ellipse id="intro-glow" cx="1690" cy="140" rx="620" ry="420" fill="url(#intro-sun)"/>' +
+        '<g id="intro-cl1">' + K.CLOUD(420, 150, 0.9) + "</g>" +
+        '<g id="intro-cl2">' + K.CLOUD(1080, 110, 0.7) + "</g>";
+      const BIRD = (x, y, s) =>
+        '<path d="M' + x + " " + y + " q" + 18 * s + " " + -16 * s + " " + 36 * s + " 0 q" + 18 * s + " " + -16 * s + " " + 36 * s + " 0 q" + -18 * s + " " + -6 * s + " " + -36 * s + " " + 4 * s + " q" + -18 * s + " " + -10 * s + " " + -36 * s + ' -4 Z" fill="#4d5a6c"/>';
+      $("birds").innerHTML =
+        '<g id="intro-b1">' + BIRD(0, 0, 1) + "</g>" + '<g id="intro-b2">' + BIRD(0, 0, 0.8) + "</g>" + '<g id="intro-b3">' + BIRD(0, 0, 0.65) + "</g>";
+
+      tl.fromTo($("dark"), { opacity: 0.9 }, { opacity: 0, duration: 0.7, ease: "power1.out" }, 0);
+      tl.fromTo($("glow"), { opacity: 0.3, scale: 0.85, svgOrigin: "1690 140" }, { opacity: 1, scale: 1, svgOrigin: "1690 140", duration: T, ease: "sine.out" }, 0);
+      tl.fromTo($("cl1"), { x: 0 }, { x: 70, duration: T, ease: "none" }, 0);
+      tl.fromTo($("cl2"), { x: 0 }, { x: 45, duration: T, ease: "none" }, 0);
+      [["b1", 240, 0.2], ["b2", 300, 0.45], ["b3", 210, 0.7]].forEach(([id, y, d], i) => {
+        tl.fromTo($(id), { x: -120 - i * 70, y: y }, { x: 2050, y: y - 90, duration: T + 0.6, ease: "none" }, d - 0.6);
+        tl.fromTo($(id), { scaleY: 1, svgOrigin: "36 0" }, { scaleY: -0.4, svgOrigin: "36 0", duration: 0.16, ease: "sine.inOut", yoyo: true, repeat: Math.floor(T / 0.32) * 2 - 1 }, 0);
+      });
+
+      const me = TOON.actor($("me"));
+      me.foreR.insertAdjacentHTML("beforeend", K.CUP);
+      TOON.pose(tl, me, 0, "hold", 0.01);
+      TOON.idle(tl, me, 0, T, 5);
+      TOON.setMouth(tl, me, 0, "rest");
+      TOON.look(tl, me, 0, 10, 0.01);
+      const tStop = T * 0.62;
+      tl.fromTo($("walk"), { x: -560 }, { x: 520, duration: tStop, ease: "sine.out" }, 0);
+      K.walk(me, 0, tStop - 0.15, 10);
+      K.sip(me, tStop + 0.05);
+      TOON.look(tl, me, T - 0.9, 14, 0.25);
+      TOON.parallax(tl, $("s0"), 0, T, { dx: 60, from: 1.08, to: 1.0, origin: "50% 55%" });
+
+      TOON.amb(0, T, "muffled_traffic", -6, { fi: 1.2 });
+      TOON.amb(0, T, "city_balcony", -12, { fi: 1.2 });
+
+      TOON.whip(tl, $("whip"), T - 0.2);
+      window.__timelines["intro"] = tl;
+    })();
+  </script>
+</template>

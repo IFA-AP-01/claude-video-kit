@@ -172,3 +172,62 @@ Add one entry per defect, newest last. Fix the template, not only the project.
     template has one bottom-right logo with a glow, `.tz-actor.kid`, all 19 background presets, and the synth
     beds live in `paper-vox-short/templates/audio`. Rule: at the end of each project, diff `film/assets/lib`,
     `tools`, `audio`, `index.html` against the templates and port anything generic.
+36. **Studio export at 4K failed** (My Boring Life, 2026-10-30): the Renders panel at 4K 60 fps with 3 workers
+    stores every frame on disk first (~2.8 MB per 4K frame → ~85 GB for 497 s) and aborted with
+    "Disk capture may need … MB" on a disk with 80 GB free. With more than one worker HyperFrames defaults to
+    disk capture (`explainStreamingEncodeGate` → `multi_worker`). Fix: `make.sh` renders with
+    `HF_DE_PARALLEL_STREAM=true`, so every worker streams frames into the encoder and nothing is stored, at any
+    worker count or resolution. Deliver from `./make.sh final`, not the Studio Renders panel (it has no such
+    switch). Verified: 497 s film at 1080p60, 2 workers, 34.5 min, free disk unchanged. Check `df -h /` first.
+
+## the art of debate (2026-10-30)
+- `TOON.pop` on an SVG `<g>` scales about (0,0), so the prop flies in from the top-left. Use `K.pop(el, t, {origin: "x ypx"})` (svgOrigin).
+- A `y` tween and a `K.pop` svgOrigin tween on the same `<g>` fight: the prop landed ~280 px low. Nest two groups: the outer one for `y`, the inner one for the pop.
+- SFX kinds `boing` and `spark` do not exist; use `whoosh` (low gain) or `pop`, or the `cartoon-boing` stinger.
+- `TOON.amb` `lp` is in Hz (e.g. 1200), not a 0–1 amount.
+- A prop centred above the middle actor covers their head; place it between two actors and move the watcher aside.
+- `kinetic` counts each letter as a word for `line_unread`: start a title at the shot start, not on its spoken word.
+- Parallel scene agents: a `pgrep -f 'hyperframes snapshot'` wait loop matches the other agents' waiting shells
+  (their command line holds the same text) and deadlocks. Wait on `pgrep -f '^node .*hyperframes (render|snapshot|check)'`.
+- Two `fromTo` on the same property of one element: the later one renders immediately at build time and
+  overrides the earlier start state (a mountain showed before its rise). Nest a group or pass `immediateRender: false`.
+- `svgOrigin` inside a transformed group is in that group's local coordinates.
+- Art helpers used more than once need an id parameter, or ids duplicate.
+- Overlays outside `.tz-cam` do not follow parallax: check on stills that arrows/pointers still reach props inside the cam.
+- Two arguing actors: keep their left positions ≥ 580 px apart, or a pointing arm crosses the other's torso.
+  Unflipped `point` aims right; an actor on the right side points with `pointL`.
+- Dropped/fallen props: dy 900–1150 to leave the frame fully (glow radius + parallax zoom), or they linger at the bottom.
+- Infographic props (pendulum, dial labels) over a busy room bg need a paper panel/pill behind them; dial labels at ≥ R+210.
+- `K.pop` on an `<svg>` root does nothing: pop an inner `<g>`.
+- A bottom pill (top ≈ 890) collides with `shrug` hands: place it mid-frame between heads.
+- Pop a bubble ≈ 0.1 s before its keyword; a late pop leaves an empty-looking frame.
+- Hush pose: `{armL:0, foreL:0, armR:100, foreR:105, head:-4}` (hand over mouth).
+- `K.PILL` height is fixed at 88 px: space labels around it. `K.STEAM` does not follow a cup during `K.sip`: place it at rest.
+- A stamp over bubble text kills readability: put it beside the text. A pointing pose reaches ≈ 250 px past the actor: keep pills out.
+- A kinetic title can wrap to two lines: leave ≥ 120 px before a pill under it.
+- `snapshot --at` always adds a frame at the film end; ignore it.
+- `meeting` bg: wall clock at top right (x1780–1880, y90–180) and chair backs cover the board below y400:
+  keep overlays left of x1760 / below y190 and board content at y ≤ 400.
+- `S.at(word)` takes the first match in the whole section: common words (that, can, more, sure, people, this) need `nth`.
+- Hair "long" reads female on a period man: use "side" under a hat. Keep a speaker's bubbles near the speaker.
+- `hyperframes lint` rewrites files (adds data-hf-id): Read again before Edit.
+- Mix went to a constant full-scale tone from a laugh one-shot on: `uniform_filter1d` of squares can dip below 0,
+  `np.sqrt` gave NaN, the clip's gain became NaN and the limiter turned it into DC for the rest of the film.
+  mix.py now clamps before sqrt, falls back when no active part, zeroes non-finite layers and asserts a finite mix.
+  After `sfx`, scan the mix per second (no 1 s RMS above −8 dBFS) before calling the audio done.
+
+- **Render looks paler than the preview (the art of debate).** The encode is correct: decoded as bt709 tv-range, the frame matches the Chrome still (same saturation, ~2 levels apart). The shift is in playback: QuickTime/macOS colour-manages a `transfer=bt709` file with the camera curve, so it shows lighter and washed out next to Chrome's sRGB. Fix: `make.sh render()` calls `srgb_tag`, a lossless remux (`-c copy`, frames bit-identical) that sets the H.264 VUI (`h264_metadata=transfer_characteristics=13`) and the MP4 `colr` atom (`-color_trc iec61966-2-1`) to sRGB. Check with `ffprobe ... color_transfer` and the `colrnclx` bytes `0001 000d 0001`.
+
+## Vertical Shorts (teleport, 2026-10-31)
+- Defect: the template was hard-wired to 1920×1080 (hosts, index root, `.tz-bg`, burst viewBox and centre, whip
+  bars, enter/exit offsets, `panOf`). Fix: `FORMAT` in BRIEF → `build_film --format`, `TOON.stage()` reads the
+  root size, vertical CSS under `body[data-format="vertical"]`, `bake_bg` sizes from the viewBox.
+- Captions belong in one global composition, not per scene, so they never cut with the shots.
+- The bottom-right channel bug sits under the Shorts like/comment buttons; vertical moves it top-right.
+- GSAP on an SVG `<g transform="translate(x y)">` replaces that transform (the badge or prop jumps to 0,0). Put the
+  translate on an outer `<g>` and animate an inner `<g id>`; pop it with `origin: "0px 0px"`. WORLD.NO does this now.
+- The rig ends at the waist (flat cut at the bottom of the 600×920 box). In wide/medium vertical shots keep the actor's
+  box bottom at or below the frame edge (e.g. `bottom: -60px`), or hide the cut behind a near prop.
+- Karaoke captions: white words with only a soft shadow vanish on white coats, sky and sand (check flags
+  contrast). `.tz-cap` now has a dark `-webkit-text-stroke` with `paint-order: stroke fill`; the vertical logo a
+  lighter one. The word un-highlight now starts no earlier than 0.09 s after its highlight (gsap_tween_tail).

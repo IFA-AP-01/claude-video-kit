@@ -38,7 +38,8 @@
         bg.src = "assets/bg/" + BGS[(seed + k) % BGS.length] + ".soft.png";
         const a = document.createElement("div");
         a.className = "tz-actor";
-        a.style.left = (k % 2 ? 1060 : 300) + "px";
+        const W = TOON.stage().W;
+        a.style.left = (k % 2 ? W * 0.55 : W * 0.16) + "px";
         a.setAttribute("data-cast", CAST[(seed + k) % CAST.length]);
         far.append(bg);
         mid.append(a);

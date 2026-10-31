@@ -518,18 +518,24 @@
     CUES.push(c);
   }
 
+  function stage() {
+    const r = document.querySelector('[data-composition-id="main"][data-width]') || document.querySelector("[data-width]");
+    return r ? { W: +r.getAttribute("data-width"), H: +r.getAttribute("data-height") } : { W: 1920, H: 1080 };
+  }
+
   function panOf(el) {
     const r = el.getBoundingClientRect && el.getBoundingClientRect();
     if (!r || !r.width) return 0;
     const root = el.closest("[data-width]");
-    const W = root ? +root.getAttribute("data-width") : 1920;
+    const W = root ? +root.getAttribute("data-width") : stage().W;
     const rr = root ? root.getBoundingClientRect() : { left: 0, width: W };
     return Math.max(-1, Math.min(1, ((r.left - rr.left + r.width / 2) / (rr.width || W)) * 2 - 1));
   }
 
   function enter(tl, el, t, opts) {
     const o = Object.assign({ from: "bottom", dur: 0.5, ease: "back.out(1.3)", sfx: "whoosh" }, opts || {});
-    const off = { bottom: { y: 700 }, left: { x: -1100 }, right: { x: 1100 }, top: { y: -700 }, pop: { scale: 0 } }[o.from];
+    const { W, H } = stage(), dy = Math.max(700, H * 0.65), dx = Math.max(1100, W * 0.6);
+    const off = { bottom: { y: dy }, left: { x: -dx }, right: { x: dx }, top: { y: -dy }, pop: { scale: 0 } }[o.from];
     const zero = { x: 0, y: 0, scale: 1 };
     tl.fromTo(el, Object.assign({}, zero, off), Object.assign({}, zero, { duration: o.dur, ease: o.ease }), t);
     if (o.sfx) cue(t, o.sfx, panOf(el), 0.8);
@@ -537,7 +543,8 @@
 
   function exit(tl, el, t, opts) {
     const o = Object.assign({ to: "bottom", dur: 0.35, ease: "power2.in" }, opts || {});
-    const off = { bottom: { y: 700 }, left: { x: -1100 }, right: { x: 1100 }, top: { y: -700 }, pop: { scale: 0 } }[o.to];
+    const { W, H } = stage(), dy = Math.max(700, H * 0.65), dx = Math.max(1100, W * 0.6);
+    const off = { bottom: { y: dy }, left: { x: -dx }, right: { x: dx }, top: { y: -dy }, pop: { scale: 0 } }[o.to];
     tl.to(el, Object.assign({ duration: o.dur, ease: o.ease }, off), t);
   }
 
@@ -661,24 +668,26 @@
 
   function whip(tl, overlay, t, opts) {
     const o = Object.assign({ out: null, in: null, dir: 1, dur: 0.36, seed: 9, sfx: "whoosh" }, opts || {});
+    const { W, H } = stage();
     if (!overlay._tzBars) {
-      const r = mulberry32(o.seed);
-      for (let i = 0; i < 22; i++) {
+      const r = mulberry32(o.seed), n = Math.round(22 * H / 1080);
+      for (let i = 0; i < n; i++) {
         const b = document.createElement("i"), h = 6 + r() * 22;
-        b.style.cssText = `left:${(r() * 1500).toFixed(0)}px;top:${(r() * 1060).toFixed(0)}px;width:${(380 + r() * 760).toFixed(0)}px;height:${h.toFixed(0)}px;opacity:${(0.55 + r() * 0.45).toFixed(2)}`;
+        b.style.cssText = `left:${(r() * W * 0.78).toFixed(0)}px;top:${(r() * (H - 20)).toFixed(0)}px;width:${(380 + r() * 760).toFixed(0)}px;height:${h.toFixed(0)}px;opacity:${(0.55 + r() * 0.45).toFixed(2)}`;
         overlay.appendChild(b);
       }
       overlay._tzBars = true;
     }
     const h = o.dur / 2, d = o.dir;
-    tl.fromTo(overlay, { x: d > 0 ? 1950 : -2700 }, { x: d > 0 ? -2700 : 1950, duration: o.dur, ease: "none" }, t - h);
+    tl.fromTo(overlay, { x: d > 0 ? W + 30 : -W - 780 }, { x: d > 0 ? -W - 780 : W + 30, duration: o.dur, ease: "none" }, t - h);
     if (o.out) tl.fromTo(o.out, { x: 0 }, { x: -320 * d, duration: h, ease: "power2.in" }, t - h);
     if (o.in) tl.fromTo(o.in, { x: 320 * d }, { x: 0, duration: h * 1.3, ease: "power2.out" }, t);
     if (o.sfx) cue(t - h, o.sfx, 0, 0.8);
   }
 
   function burst(tl, t, opts) {
-    const o = Object.assign({ out: null, in: null, dur: 0.5, seed: 21, cx: 960, cy: 540, colors: ["#a9c6ea", "#7fa7d9"], sfx: "whoosh", hit: "pop" }, opts || {});
+    const { W, H } = stage();
+    const o = Object.assign({ out: null, in: null, dur: 0.5, seed: 21, cx: W / 2, cy: H / 2, colors: ["#a9c6ea", "#7fa7d9"], sfx: "whoosh", hit: "pop" }, opts || {});
     if (!o.in) throw new Error("TOON.burst: opts.in (incoming shot) is required");
     const r = mulberry32(o.seed + Math.round(t * 1000));
     const star = (n, inner, tip) => {
@@ -692,7 +701,7 @@
     };
     const NS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", "0 0 1920 1080");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("class", "tz-burst-svg");
     const rim = (pts, fill) => {
       const g = document.createElementNS(NS, "g"), p = document.createElementNS(NS, "polygon");
@@ -710,7 +719,7 @@
     mp.setAttribute("points", mask.map(([x, y]) => `${(o.cx + x).toFixed(3)},${(o.cy + y).toFixed(3)}`).join(" "));
     cp.appendChild(mp); svg.appendChild(cp);
     gsap.set(mp, { svgOrigin: `${o.cx} ${o.cy}` });
-    const t0 = t - o.dur, R1 = 1650;
+    const t0 = t - o.dur, R1 = 1650 * Math.max(1, Math.hypot(W, H) / 2203);
     tl.set(svg, { opacity: 0 }, 0);
     tl.set(svg, { opacity: 1 }, t0);
     tl.set(svg, { opacity: 0 }, t + 0.02);
@@ -730,6 +739,42 @@
     const o = Object.assign({ at: "50% 50%", hold: 0.5, to: 9, dur: 0.5 }, opts || {});
     tl.fromTo(el, { clipPath: `circle(120% at ${o.at})` }, { clipPath: `circle(${o.to}% at ${o.at})`, duration: o.dur, ease: "power2.inOut" }, t);
     tl.fromTo(el, { clipPath: `circle(${o.to}% at ${o.at})` }, { clipPath: `circle(0% at ${o.at})`, duration: 0.22, ease: "power2.in", immediateRender: false }, t + o.dur + o.hold);
+  }
+
+  // Multi-plane camera. Every element with data-z inside the shot is a depth plane: z 0 = sky (fixed),
+  // 1 = the subject plane, >1 = foreground (moves and zooms more). keys: [{ t, x, y, s, ease }] in
+  // camera units (px at z 1); between keys the camera eases (bell curve by default) and holds after.
+  // One key list across a wide/tall world = a one-shot move; two keys with ease "none" = slow drift.
+  function move(tl, shot, keys, opts) {
+    const o = Object.assign({ ox: "50%", oy: "50%", ease: "power2.inOut" }, opts || {});
+    const planes = [...shot.querySelectorAll("[data-z]")];
+    if (!planes.length) throw new Error("TOON.move: no [data-z] planes in " + (shot.id || "shot"));
+    const ks = keys.map((k) => Object.assign({ x: 0, y: 0, s: 1 }, k));
+    const st = (z, k) => ({ x: -k.x * z, y: -k.y * z, scale: 1 + (k.s - 1) * z });
+    for (const el of planes) {
+      const z = +el.getAttribute("data-z");
+      tl.set(el, Object.assign({ transformOrigin: `${o.ox} ${o.oy}` }, st(z, ks[0])), Math.max(0, ks[0].t - 0.001));
+      for (let i = 1; i < ks.length; i++) {
+        const a = ks[i - 1], b = ks[i];
+        tl.fromTo(el, st(z, a), Object.assign(st(z, b), { duration: Math.max(0.05, b.t - a.t), ease: b.ease || o.ease, immediateRender: false }), a.t);
+      }
+    }
+  }
+
+  // Handheld / walking camera: small seeded drift of a wrapper (never the element that `move` drives).
+  function bob(tl, el, t0, t1, opts) {
+    const o = Object.assign({ amp: 6, rot: 0.4, period: 1.1, seed: 3, walk: false }, opts || {});
+    const r = mulberry32(o.seed);
+    let t = t0, i = 0, last = { x: 0, y: 0, rotation: 0 };
+    while (t < t1 - 0.05) {
+      const d = Math.min(o.period * (0.8 + r() * 0.4), t1 - t);
+      const nx = o.walk ? (i % 2 ? 1 : -1) * o.amp * 0.6 : (r() - 0.5) * 2 * o.amp;
+      const ny = o.walk ? (i % 2 ? o.amp : -o.amp * 0.4) : (r() - 0.5) * 2 * o.amp;
+      const next = { x: nx, y: ny, rotation: (r() - 0.5) * 2 * o.rot };
+      tl.fromTo(el, last, Object.assign({}, next, { duration: d, ease: "sine.inOut", immediateRender: false }), t);
+      last = next; t += d; i++;
+    }
+    tl.to(el, { x: 0, y: 0, rotation: 0, duration: 0.2, ease: "sine.out" }, t1 - 0.05);
   }
 
   function cuts(tl, shots, times) {
@@ -781,5 +826,6 @@
     rng: mulberry32, fold, visemes, makeChar,
     scene, actor, talk, idle, pose, gestures, look, brows, setMouth,
     enter, exit, pop, bubble, statPill, kinetic, splitChars, chart, bars, nameCard, pin, camera, parallax, shake, whip, burst, iris, cuts, cue, amb, clip,
+    stage, move, bob,
   };
 })();

@@ -41,6 +41,10 @@ We copy the grammar, never their logo, characters or channel identity.
    `align` also widens the voice's pauses (`PAUSE_SECTION/PARA/SENTENCE` in BRIEF.md, default 2.0/1.6/0.7 s)
    because a one-breath read overwhelms viewers. It rewrites the master in place: after `voice`, copy
    `audio/out/1.0x/voice_master.wav` to `out/` so the user can A/B the old read.
+   `INTRO` (BRIEF.md, default 4.5 s) gives every film a calm opening before the first word (the user wants
+   viewers to settle in): `audio/intro.py` pads the voice with room tone and shifts words.json, and
+   build_film adds an `intro` section from `tools/intro-template.html` (establishing shot, fade from dark,
+   ambience, whip out). Redraw it to fit the story's first setting.
 4. **Preview**: add the printed config to the workspace `.claude/launch.json`, `preview_start` →
    HyperFrames Studio on port 3002 (timeline, scrub, play).
 5. **Scene 1** → `./make.sh check` (lint + craft + one snapshot per scene, read `out/check/contact-sheet.jpg`)
@@ -111,12 +115,28 @@ Read `references/example-scene.html` (a finished 4-shot scene) and `references/r
 - Sound has three layers: SFX (cues from the scenes), situational stingers, and phase music. Stingers are short
   musical/comic cues on story beats (sad sting on a let-down line, record scratch on an ironic one, twinkle on a
   warm one, low hit on a fear line); keep them sparse (about one per scene at most). List them in
-  `audio/sting/plan.json` (`{"cues": [{"t": <end of the line>, "file": stem, "db": 0}]}`, t from
-  `data/words.json`) and set `STINGS=audio/sting/plan.json`. `mix.py` starts each one in the first pause
+  `audio/sting/plan.json` (`{"cues": [{"line": <index in data/words.json lines>, "off": 0, "file": stem, "db": 0}]}`;
+  `mix.py` sets t = that line's end + off, so cues survive a TEMPO or pause re-time; a bare `t` still works) and set `STINGS=audio/sting/plan.json`. `mix.py` starts each one in the first pause
   after t, levels it to STING_DB (-12) vs the voice with a peak cap, softens it like the SFX bus, ducks it
   under speech and dips the music 4 dB under it. Generic sounds from MyInstants are usable (ask before
   downloading); never a rip from a film, game or song (e.g. its "Sad Piano Tune" is Pixar's Up score):
   match that mood with a licensed track instead. Listen-check `out/ab/sting_only.wav`.
+
+## Vertical Shorts (`FORMAT=vertical`, `CAPTIONS=1` in BRIEF.md)
+`build_film` sizes every host and `index.html` to 1080×1920 and tags `<body data-format="vertical">`; `toon.css`
+then scales the 16:9 background art to 3413×1920 (pan it with `--bg-left` per shot), resizes overlays, moves the
+logo top-right (the Shorts UI covers the bottom-right) and `TOON.burst/whip/enter/exit/panOf` read the stage size
+(`TOON.stage()`). `CAPTIONS=1` adds a `captions` composition (track 8, from `tools/captions-template.html`):
+karaoke chunks of ≤3 words, active word yellow. Shorts safe area: keep text clear of the top 200 px, the bottom
+380 px and the right 150 px below y≈900.
+Camera menu for vertical (pick one per line, mix them; the user wants more than the side-on explainer stage):
+- **3rd-person wide**: actor ~35 % of frame height in a big environment; **OTS**: back-view actor huge in the near plane.
+- **POV (1st-person)**: `K.HANDS(id, {skin, sleeve})` forearms from the bottom edge, moved with `K.povArm(arm, t, {x, y, rot})`;
+  `K.LIDS(id)` + `K.lidsInit/lids/blink` eyelid mask — a blink is a free cut between two places.
+- **Close-up**: `K.closeup(el, {cx, cy, w, part: "face"|"eyes"|"mouth"})` before `TOON.actor(el)`.
+- **One-shot / deep parallax**: put planes with `data-z` (0 far … 1 actors … 1.6 foreground) in a shot and drive
+  them with `TOON.move(tl, shot, [{t, x, y, s}, …])`; holds land on key words, moves sit between words.
+  `TOON.bob(tl, wrapper, t0, t1, {amp, walk})` adds handheld or walking drift to POV shots.
 
 ## HyperFrames rules (break these and the render differs from the preview)
 - `fromTo`, never `from`; no `repeat: -1`; no CSS `transform` on tweened elements; never tween

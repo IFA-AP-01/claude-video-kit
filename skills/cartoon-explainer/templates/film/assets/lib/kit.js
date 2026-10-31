@@ -197,6 +197,76 @@
         tl.fromTo(p, { y: 10, opacity: 0 }, { y: -30, opacity: 0.75, duration: per, ease: "sine.out", repeat: n }, t0 + i * 0.4);
       });
 
-    return { sp, coat, CLOUD, TREE, GLOW, LAND, BAMBOO, PADDY, LANTERN, ARECA, JAR, HOUSE, COURT, BUF, HAT, hat, THINK, FACE, BANG, STAR, SPARK, PILL, CHECK, CUP, BOWL, DRAGON, pop, stamp, eyesDown, walk, hop, shake, sip, STEAM, steam };
+      // ---- First-person (POV) layer: two forearms from the bottom edge, back of the hand to camera.
+      // HANDS(id, o) → SVG markup for a 1080×1920 plane; arms are groups #<P><id>L / #<P><id>R with the wrist
+      // at (0,0) and the forearm running down off-frame. Place with povArm(); o: { skin, sleeve, cuff }.
+      const ARM = (gid, side, o) => {
+        const sk = o.skin || "#f0c49c", sd = o.skinShade || "#d9a47c", sl = o.sleeve || "#3f6fa8", sls = o.sleeveShade || "#2f5687", cf = o.cuff || "#e9eef3";
+        const m = side === "L" ? -1 : 1;
+        const X = (x) => (x * m).toFixed(1);
+        let g = `<g id="${gid}"><g class="kit-arm">`;
+        g += `<path d="M${X(-92)} 70 C${X(-104)} 400 ${X(-130)} 760 ${X(-150)} 1200 L${X(170)} 1200 C${X(150)} 760 ${X(118)} 400 ${X(96)} 70 Z" fill="${sl}"/>`;
+        g += `<path d="M${X(40)} 70 C${X(60)} 400 ${X(84)} 760 ${X(96)} 1200 L${X(170)} 1200 C${X(150)} 760 ${X(118)} 400 ${X(96)} 70 Z" fill="${sls}"/>`;
+        g += `<path d="M${X(-60)} 330 C${X(-70)} 520 ${X(-84)} 760 ${X(-96)} 1100" stroke="${sls}" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.45"/>`;
+        g += `<rect x="${Math.min(X(-100), X(104))}" y="30" width="204" height="62" rx="26" fill="${cf}"/>`;
+        g += `<rect x="${Math.min(X(30), X(104))}" y="30" width="74" height="62" rx="20" fill="#000" opacity="0.1"/>`;
+        // palm (back of the hand), knuckles up
+        g += `<path d="M${X(-78)} 40 C${X(-96)} -40 ${X(-96)} -130 ${X(-84)} -186 C${X(-40)} -206 ${X(40)} -208 ${X(82)} -190 C${X(98)} -130 ${X(96)} -40 ${X(80)} 40 Z" fill="${sk}"/>`;
+        g += `<path d="M${X(30)} 40 C${X(56)} -40 ${X(62)} -130 ${X(54)} -196 C${X(70)} -194 ${X(78)} -192 ${X(82)} -190 C${X(98)} -130 ${X(96)} -40 ${X(80)} 40 Z" fill="${sd}"/>`;
+        // fingers: index → little
+        const F = [[-60, -186, -72, -350, 25], [-20, -196, -22, -380, 26], [22, -196, 28, -366, 25], [62, -184, 74, -322, 22]];
+        for (const [x0, y0, x1, y1, r] of F) {
+          g += `<path d="M${X(x0 - r)} ${y0 + 10} L${X(x1 - r * 0.9)} ${y1 + r} A${r * 0.9} ${r * 0.9} 0 0 1 ${X(x1 + r * 0.9)} ${y1 + r} L${X(x0 + r)} ${y0 + 10} Z" fill="${sk}"/>`;
+          g += `<path d="M${X(x0 + r * 0.25)} ${y0 + 10} L${X(x1 + r * 0.25)} ${y1 + r * 1.1} A${r * 0.9} ${r * 0.9} 0 0 1 ${X(x1 + r * 0.9)} ${y1 + r} L${X(x0 + r)} ${y0 + 10} Z" fill="${sd}" opacity="0.8"/>`;
+          g += `<ellipse cx="${X(x1)}" cy="${y1 + r * 0.95}" rx="${r * 0.55}" ry="${r * 0.42}" fill="#f7dcc4" opacity="0.8"/>`;
+          g += `<ellipse cx="${X(x0 + (x1 - x0) * 0.08)}" cy="${y0 - 8}" rx="${r * 0.6}" ry="${r * 0.32}" fill="#fff" opacity="0.18"/>`;
+        }
+        // thumb, tucked toward the body centre
+        g += `<path d="M${X(-74)} -20 C${X(-130)} -60 ${X(-168)} -120 ${X(-176)} -176 C${X(-180)} -204 ${X(-140)} -214 ${X(-128)} -186 C${X(-118)} -150 ${X(-96)} -110 ${X(-66)} -96 Z" fill="${sk}"/>`;
+        g += `<path d="M${X(-74)} -20 C${X(-130)} -60 ${X(-168)} -120 ${X(-176)} -176 C${X(-166)} -150 ${X(-130)} -96 ${X(-70)} -60 Z" fill="${sd}" opacity="0.7"/>`;
+        return g + "</g></g>";
+      };
+      const HANDS = (id, o) => ARM(P + id + "L", "L", o || {}) + ARM(P + id + "R", "R", o || {});
+      // povArm(arm, t, { x, y, rot, dur, ease, from }) moves one forearm group in plane px (wrist position).
+      const povArm = (arm, t, o) => {
+        o = Object.assign({ dur: 0.5, ease: "power2.inOut", rot: 0 }, o);
+        const to = { x: o.x, y: o.y, rotation: o.rot, svgOrigin: "0 0", duration: o.dur, ease: o.ease };
+        if (o.from) tl.fromTo(arm, Object.assign({ svgOrigin: "0 0", rotation: 0 }, o.from), Object.assign(to, { immediateRender: false }), t);
+        else tl.to(arm, to, t);
+      };
+      // Eyelids for POV blinks: LIDS(id) → markup (1080×1920 plane); blink(id, t, { close, hold, open }).
+      const LIDS = (id, col) => {
+        const c = col || "#1b1622";
+        return `<g id="${P}${id}T"><path d="M-200 -2200 L1280 -2200 L1280 0 C980 160 100 160 -200 0 Z" fill="${c}"/><path d="M-200 0 C100 160 980 160 1280 0 C980 230 100 230 -200 0 Z" fill="${c}" opacity="0.45"/></g>` +
+          `<g id="${P}${id}B"><path d="M-200 4120 L1280 4120 L1280 1920 C980 1760 100 1760 -200 1920 Z" fill="${c}"/><path d="M-200 1920 C100 1760 980 1760 1280 1920 C980 1690 100 1690 -200 1920 Z" fill="${c}" opacity="0.45"/></g>`;
+      };
+      const lidState = {};
+      const lids = (id, t, shut, dur) => {
+        const T = document.getElementById(P + id + "T"), B = document.getElementById(P + id + "B");
+        const from = lidState[id] == null ? 0 : lidState[id];
+        const y = (k) => [{ y: -170 + k * 1130 }, { y: 170 - k * 1130 }];
+        const [ft, fb] = y(from), [tt, tb] = y(shut);
+        tl.fromTo(T, ft, Object.assign(tt, { duration: dur || 0.18, ease: shut > from ? "power2.in" : "power2.out", immediateRender: false }), t);
+        tl.fromTo(B, fb, Object.assign(tb, { duration: dur || 0.18, ease: shut > from ? "power2.in" : "power2.out", immediateRender: false }), t);
+        lidState[id] = shut;
+      };
+      const lidsInit = (id, shut) => {
+        const T = document.getElementById(P + id + "T"), B = document.getElementById(P + id + "B");
+        tl.set(T, { y: -170 + shut * 1130 }, 0); tl.set(B, { y: 170 - shut * 1130 }, 0);
+        lidState[id] = shut;
+      };
+      const blink = (id, t, o) => {
+        o = Object.assign({ hold: 0.05, dur: 0.09 }, o);
+        lids(id, t, 1, o.dur);
+        lids(id, t + o.dur + o.hold, 0, o.dur * 1.6);
+      };
+      // Close-up: frame an actor's face/eyes at (cx, cy) with face width w (px). Call before TOON.actor.
+      const closeup = (el, o) => {
+        o = Object.assign({ cx: 540, cy: 760, w: 900, part: "face" }, o);
+        const sc = o.w / 330, fy = o.part === "eyes" ? 272 : o.part === "mouth" ? 360 : 305;
+        Object.assign(el.style, { width: 600 * sc + "px", height: 920 * sc + "px", left: o.cx - 300 * sc + "px", top: o.cy - fy * sc + "px", bottom: "auto" });
+      };
+
+    return { HANDS, povArm, LIDS, lids, lidsInit, blink, closeup, sp, coat, CLOUD, TREE, GLOW, LAND, BAMBOO, PADDY, LANTERN, ARECA, JAR, HOUSE, COURT, BUF, HAT, hat, THINK, FACE, BANG, STAR, SPARK, PILL, CHECK, CUP, BOWL, DRAGON, pop, stamp, eyesDown, walk, hop, shake, sip, STEAM, steam };
   };
 })();

@@ -10,6 +10,7 @@ SCRIPT=script.txt      # script; a [Tag] on its own line starts a section (= one
 LANGUAGE=vi            # voice language for alignment (vi, en, ...)
 TEMPO=1.0              # voice speed, applied BEFORE alignment
 END_HOLD=1.5           # seconds held after the last word
+INTRO=4.5              # quiet opening: seconds before the first word (own `intro` scene); 0 = none
 PAUSE_SECTION=2.0      # min. pause between scenes, s (the voice is widened with its own room tone)
 PAUSE_PARA=1.6         # min. pause at a paragraph break in the script
 PAUSE_SENTENCE=0.7     # min. pause after a sentence
@@ -21,12 +22,14 @@ MUSIC_DB=-20           # music vs voice under speech, dB
 STINGS=                # situational stingers plan (audio/sting/plan.json); empty = none
 BRAND=                 # channel name, one logo bug bottom-right (empty = BRAND placeholder)
 WORKERS=2              # render workers (each one is a Chrome, ~256 MB)
+FORMAT=landscape       # landscape 1920×1080 | vertical 1080×1920 (Shorts / Reels / TikTok)
+CAPTIONS=0             # 1 = karaoke captions over the whole film (compositions/captions.html)
 ```
 
 ## 2. Content
 - Topic / angle (1–2 sentences):
 - Tone: curious explainer (hook question → facts → mechanism → stakes → twist/caveat)
-- Length: 16:9 1920×1080, 60 fps
+- Format: FORMAT above (16:9 1920×1080 or 9:16 1080×1920), 60 fps
 
 ## 3. Scenes
 One row per `[Tag]` section (`film/compositions/<id>.html`). Cast keys: `exec`, `scientist`, `worker`,

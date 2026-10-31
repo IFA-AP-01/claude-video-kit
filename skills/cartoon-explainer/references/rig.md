@@ -63,3 +63,10 @@ round, else wide; final `m/p/b` → closed; digits → 1–3 open/wide/round. Mo
 | `shake(tl, el, t, { amp })` | seeded impact shake |
 | `cuts(tl, shots, times)` | hard cuts by opacity |
 | `cue(t, kind, x, gain, dur)` | extra SFX: stamp, slap, paper, tape, whoosh, tick, type, cross, fan, hiss, pop |
+
+## Camera helpers (any format)
+- `TOON.move(tl, shot, keys)`: multi-plane camera. Planes are elements with `data-z` inside the shot; at each key
+  `{t, x, y, s, ease}` a plane gets `x:-x*z, y:-y*z, scale:1+(s-1)*z`, so far planes (small z) barely move.
+- `TOON.bob(tl, el, t0, t1, {amp, rot, period, seed, walk})`: seeded handheld/walk drift on a wrapper div.
+- `K.HANDS / K.povArm / K.LIDS / K.lids / K.lidsInit / K.blink`: first-person arms and eyelids (1080×1920 plane).
+- `K.closeup(el, {cx, cy, w, part})`: sizes an actor div so its face is `w` px wide centred at (cx, cy).

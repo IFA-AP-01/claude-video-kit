@@ -84,6 +84,9 @@ def place(bus, y, t):
     i = int(round(t * SR))
     if i >= len(bus) or i + len(y) <= 0:
         return
+    if not np.all(np.isfinite(y)):
+        print(f"  warning: non-finite samples in a layer at {t:.2f} s, zeroed")
+        y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
     a, b = max(0, -i), min(len(y), len(bus) - i)
     bus[i + a:i + b] += y[a:b]
 
@@ -92,7 +95,7 @@ def speech_activity(voice):
     """0..1 per 5 ms hop: narrator speaking (held 120 ms past each syllable, 80 ms smoothing)."""
     hop = SR // 200  # 5 ms
     n = len(voice) // hop
-    rms = np.sqrt(uniform_filter1d(voice[: n * hop] ** 2, hop)[::hop][:n] + 1e-12)
+    rms = np.sqrt(np.maximum(uniform_filter1d(voice[: n * hop] ** 2, hop)[::hop][:n], 0) + 1e-12)
     db = 20 * np.log10(rms)
     active = (db > db.max() - 35).astype(float)
     active = maximum_filter1d(active, 24)          # hold 120 ms past each syllable
@@ -264,8 +267,9 @@ def one_shot(c, v_rms):
         fo = min(len(y), int(0.08 * SR))
         y[len(y) - fo:] *= np.linspace(1, 0, fo)[:, None]
     hop = SR // 20
-    seg = np.sqrt(uniform_filter1d((y ** 2).mean(1), hop)[::hop])
+    seg = np.sqrt(np.maximum(uniform_filter1d((y ** 2).mean(1), hop)[::hop], 0))
     act = seg[seg > seg.max() * 10 ** (-30 / 20)]
+    act = act if len(act) else seg
     y *= v_rms * 10 ** (c.get("db", 0) / 20) / (np.sqrt(np.mean(act ** 2)) + 1e-12)
     pan = float(np.clip(c.get("x", 0.0), -1, 1)) * MAX_PAN
     return y * np.array([np.cos((pan + 1) * np.pi / 4), np.sin((pan + 1) * np.pi / 4)]) * np.sqrt(2)
@@ -274,6 +278,11 @@ def one_shot(c, v_rms):
 def sting_bus(plan_path, voice, active, v_rms):
     """Stingers on story beats -> (stereo bus, 0..1 presence envelope for the music dip)."""
     cues = json.loads(plan_path.read_text())["cues"]
+    wp = ROOT / "data/words.json"
+    lines = json.loads(wp.read_text())["lines"] if wp.exists() else []
+    for c in cues:
+        if "line" in c and c["line"] < len(lines):
+            c["t"] = lines[c["line"]]["end"] + c.get("off", 0)
     bus = np.zeros((len(voice), 2))
     pres = np.zeros(len(voice))
     hp = butter(2, STING_HP, btype="high", fs=SR, output="sos")
@@ -287,8 +296,9 @@ def sting_bus(plan_path, voice, active, v_rms):
         fo = min(n, int(STING_FADE * SR))
         y[n - fo:] *= (np.cos(np.linspace(0, np.pi / 2, fo)) ** 2)[:, None]
         hop = SR // 20
-        seg = np.sqrt(uniform_filter1d((y ** 2).mean(1), hop)[::hop])
+        seg = np.sqrt(np.maximum(uniform_filter1d((y ** 2).mean(1), hop)[::hop], 0))
         act = seg[seg > seg.max() * 10 ** (-30 / 20)]
+        act = act if len(act) else seg
         target = v_rms * 10 ** ((STING_DB + c.get("db", 0)) / 20)
         g = min(target / (np.sqrt(np.mean(act ** 2)) + 1e-12), target * 10 ** (STING_CREST / 20) / (np.abs(y).max() + 1e-12))
         t0 = c["t"] + c.get("gap", STING_GAP)
@@ -389,6 +399,7 @@ def main():
     # loudness: measure, apply one static gain, then a true-peak-aware limiter (oversampled) in ffmpeg
     with tempfile.TemporaryDirectory() as d:
         raw = Path(d) / "raw.wav"
+        assert np.all(np.isfinite(mix)), "mix has NaN/inf samples"
         sf.write(raw, mix, SR, subtype="FLOAT")
         I, _ = ffmpeg_loudness(raw)
         gain = TARGET_LUFS - I

@@ -19,13 +19,13 @@ cd "$(dirname "$0")"
 ROOT=$PWD
 
 VOICE=voice.mp3 SCRIPT=script.txt LANGUAGE=vi TEMPO=1.0 END_HOLD=1.5 WARMTH=1 LOUDNESS=-14 SFX_DB=3
-MUSIC= MUSIC_DB=-20 STINGS= BRAND= WORKERS=2
+MUSIC= MUSIC_DB=-20 STINGS= BRAND= WORKERS=2 FORMAT=landscape CAPTIONS=0
 PAUSE_SECTION=2.0 PAUSE_PARA=1.6 PAUSE_SENTENCE=0.7
 if [[ -f BRIEF.md ]]; then
   while IFS='=' read -r k v; do
     v=${v%%#*}; v=${v%"${v##*[![:space:]]}"}; v=${v#"${v%%[![:space:]]*}"}
     [[ -n $v ]] && printf -v "$k" '%s' "$v"
-  done < <(grep -E '^(VOICE|SCRIPT|LANGUAGE|TEMPO|END_HOLD|WARMTH|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB|STINGS|BRAND|WORKERS|PAUSE_SECTION|PAUSE_PARA|PAUSE_SENTENCE)=' BRIEF.md)
+  done < <(grep -E '^(VOICE|SCRIPT|LANGUAGE|TEMPO|END_HOLD|WARMTH|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB|STINGS|BRAND|WORKERS|PAUSE_SECTION|PAUSE_PARA|PAUSE_SENTENCE|INTRO|FORMAT|CAPTIONS)=' BRIEF.md)
 fi
 
 export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1
@@ -81,7 +81,7 @@ cmd_voice() {
 
 cmd_film() {
   [[ -f data/words.json ]] || die "no data/words.json — run ./make.sh align"
-  node tools/build_film.mjs ${BRAND:+--brand "$BRAND"}
+  node tools/build_film.mjs --format "$FORMAT" --captions "$CAPTIONS" ${BRAND:+--brand "$BRAND"}
 }
 
 cmd_align() {
@@ -113,6 +113,8 @@ cmd_pauses() {
   [[ -f data/words.json ]] || die "no data/words.json — run ./make.sh align"
   say "pauses (scene $PAUSE_SECTION s, paragraph $PAUSE_PARA s, sentence $PAUSE_SENTENCE s)"
   audio/.venv/bin/python audio/pauses.py --section "$PAUSE_SECTION" --para "$PAUSE_PARA" --sentence "$PAUSE_SENTENCE"
+  say "intro (${INTRO:-0} s before the first word)"
+  audio/.venv/bin/python audio/intro.py --intro "${INTRO:-0}"
   say "film"
   cmd_film
 }
@@ -156,7 +158,13 @@ cmd_sfx() {
 
 render() {
   local dir=$1 out=$2 q=$3
-  "${NICE[@]}" "$HF" render "$dir" --fps 60 -q "$q" --no-browser-gpu -w "$WORKERS" -o "$out"
+  HF_DE_PARALLEL_STREAM=true "${NICE[@]}" "$HF" render "$dir" --fps 60 -q "$q" --no-browser-gpu -w "$WORKERS" -o "$out"
+  srgb_tag "$out"
+}
+
+srgb_tag() {
+  local f=$1 tmp="${1%.mp4}.srgb.mp4"
+  ffmpeg -v error -y -i "$f" -map 0 -c copy -bsf:v h264_metadata=transfer_characteristics=13 -color_trc iec61966-2-1 -movflags +faststart "$tmp" && mv "$tmp" "$f"
 }
 
 cmd_test() {
@@ -165,7 +173,7 @@ cmd_test() {
   local t=out/.test-film
   rm -rf "$t" && mkdir -p out
   rsync -a --exclude node_modules --exclude renders --exclude .hyperframes film/ "$t/"
-  sed -i '' -E 's/(id="(root|logo-l|logo-r|mix)"[^>]*data-duration=")[^"]*"/\13"/' "$t/index.html"
+  sed -i '' -E 's/(id="(root|logo-l|logo-r|mix|captions)"[^>]*data-duration=")[^"]*"/\13"/' "$t/index.html"
   render "$t" "$ROOT/out/test.mp4" draft
   rm -rf "$t"
   ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate:format=duration -of compact out/test.mp4
@@ -192,6 +200,6 @@ case ${1:-help} in
   sfx) cmd_sfx ;;
   test) cmd_test ;;
   final) cmd_final ;;
-  settings) echo "VOICE=$VOICE SCRIPT=$SCRIPT LANGUAGE=$LANGUAGE TEMPO=$TEMPO END_HOLD=$END_HOLD WARMTH=$WARMTH LOUDNESS=$LOUDNESS SFX_DB=$SFX_DB MUSIC=$MUSIC MUSIC_DB=$MUSIC_DB STINGS=$STINGS BRAND=$BRAND WORKERS=$WORKERS PAUSE_SECTION=$PAUSE_SECTION PAUSE_PARA=$PAUSE_PARA PAUSE_SENTENCE=$PAUSE_SENTENCE" ;;
+  settings) echo "VOICE=$VOICE SCRIPT=$SCRIPT LANGUAGE=$LANGUAGE TEMPO=$TEMPO END_HOLD=$END_HOLD WARMTH=$WARMTH LOUDNESS=$LOUDNESS SFX_DB=$SFX_DB MUSIC=$MUSIC MUSIC_DB=$MUSIC_DB STINGS=$STINGS BRAND=$BRAND WORKERS=$WORKERS FORMAT=$FORMAT CAPTIONS=$CAPTIONS PAUSE_SECTION=$PAUSE_SECTION PAUSE_PARA=$PAUSE_PARA PAUSE_SENTENCE=$PAUSE_SENTENCE" ;;
   *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
