@@ -83,10 +83,10 @@ body[data-format="vertical"] .tz-logo { bottom: auto; top: 214px; -webkit-text-s
 .tz-plane > svg { position: absolute; left: 0; top: 0; overflow: visible; }
 
 /* Karaoke captions (CAPTIONS=1): one chunk of 1–4 words at a time, active word lit. */
-.tz-caps { position: absolute; left: 70px; right: 150px; top: 1250px; height: 300px; pointer-events: none; z-index: 45; }
+.tz-caps { position: absolute; left: 70px; right: 150px; top: 1430px; height: 200px; pointer-events: none; z-index: 45; }
 body[data-format="landscape"] .tz-caps { left: 260px; right: 260px; top: 850px; height: 180px; }
-.tz-cap { position: absolute; left: 0; right: 0; top: 0; text-align: center; font: 900 82px/1.08 var(--tz-font); color: #fff; text-transform: uppercase; letter-spacing: 0.01em;
-  -webkit-text-stroke: 14px rgba(28, 30, 48, 0.92); paint-order: stroke fill;
-  text-shadow: 0 7px 0 rgba(20, 24, 40, 0.6), 0 0 22px rgba(20, 24, 40, 0.45); opacity: 0; }
+.tz-cap { position: absolute; left: 0; right: 0; top: 0; text-align: center; font: 900 66px/1.08 var(--tz-font); color: #fff; text-transform: uppercase; letter-spacing: 0.01em;
+  -webkit-text-stroke: 11px rgba(28, 30, 48, 0.92); paint-order: stroke fill;
+  text-shadow: 0 5px 0 rgba(20, 24, 40, 0.6), 0 0 22px rgba(20, 24, 40, 0.45); opacity: 0; }
 .tz-cap .w { display: inline-block; margin: 0 0.12em; }
 .tz-cap .w.hot { color: #ffd84a; }

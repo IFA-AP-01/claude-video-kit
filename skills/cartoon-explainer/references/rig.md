@@ -35,6 +35,16 @@ Colours pass through `mute()`; shades come from `mix(colour, dark, t)`. Check ch
 | `.tz-armL/R` | 182 520 / 418 520 | `pose` upper arm |
 | `.tz-foreL/R` | 150 712 / 450 712 | `pose` forearm + hand |
 | `.tz-m-{rest,closed,open,round,wide}` | — | `talk` (opacity swaps via `tl.set`) |
+| `.tz-char` | 300 1392 (`ORIGIN.feet`) | `idle` sway (feet stay planted) |
+| `.tz-legL/R` | 250 890 / 350 890 | `K.walk` step lift (thigh) |
+| `.tz-shinL/R` | 244 1130 / 356 1130 | `K.walk` knee bend (scaleY) |
+
+Full body: legs (trousers `pants`, shoes `shoe` per OUTFIT, overridable in `colors`) and a ground shadow
+(`.tz-shadow`) hang below the 600×920 viewBox (overflow visible) down to the soles at y 1392. A waist-up placement
+(box bottom near the frame edge) simply leaves them off-frame. To stand an actor on a ground line `gy`, set
+`top = gy − 1.513 × height` (the full figure is 1.43 × the box height tall). Use full bodies whenever a character
+stands, walks or steps; keep waist-up framing for close-ups. `K.walk(rig, t0, t1, amp, step=0.28)` alternates
+leg lifts and knee bends with a body bob and sway; `sheets/legs.html` shows the cast full-body.
 
 Poses (`TOON.POSES`, degrees): `rest`, `explain`, `explain2`, `point` (to the right), `pointL`,
 `shrug`, `handsUp`, `think`, `cross`. `pose(tl, rig, t, name, dur=0.35)` tweens from the rig's last

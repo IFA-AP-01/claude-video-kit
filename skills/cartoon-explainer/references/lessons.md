@@ -231,3 +231,46 @@ Add one entry per defect, newest last. Fix the template, not only the project.
 - Karaoke captions: white words with only a soft shadow vanish on white coats, sky and sand (check flags
   contrast). `.tz-cap` now has a dark `-webkit-text-stroke` with `paint-order: stroke fill`; the vertical logo a
   lighter one. The word un-highlight now starts no earlier than 0.09 s after its highlight (gsap_tween_tail).
+
+## Hidden FX flash at scene start (teleport, 2026-10-31)
+- Defect: light rings meant to appear only during the booth charge showed from the first frame of the shot.
+- Cause: `tl.fromTo(el, { opacity: 0.9 }, …, laterTime)` renders its from-state immediately, so scrubbing anywhere
+  before `laterTime` shows the element at 0.9.
+- Fix: `tl.set(el, { opacity: 0 }, 0)` plus `immediateRender: false` on any fromTo whose from-state is visible and
+  starts after the shot begins.
+
+## Showing a waist-up rig enter a doorway (teleport, 2026-10-31)
+- The rig has no legs, so "steps into the booth" is staged as: OTS back view walking toward the open doors (box bottom
+  off-frame, scaled toward the door point), cut to the front of the booth where the actor sits in a div clipped to
+  the door rect (`clip-path: inset(...)` from the art's door rect) and the doors are drawn in a layer above him.
+  Split the booth art so doors can be drawn separately (`booth(..., { doors: false })` + `doors(...)`).
+
+## Characters need legs (teleport, 2026-10-31)
+- The user wants full-body characters; waist-up cut-outs read as fake when someone walks or steps through a door.
+  The rig now draws legs, shoes and a shadow below the 920 viewBox (sole y 1392) and `K.walk` swings them; the idle
+  sway pivots at the feet so they stay planted. The doorway trick above is still useful for occlusion, but clip only
+  the sides/top of the door rect (inset bottom 0) so the legs show on the threshold.
+
+## Voice too fast (teleport, 2026-10-31)
+TEMPO 0.95 (~199 wpm) still read as rushed. Template default is now TEMPO=0.88 (~185 wpm); re-run `voice` + `align`, scenes re-time from words.json.
+
+## K.pop / svgOrigin on a group with its own transform attribute (teleport, 2026-10-31)
+- Defect: `<g id=x transform="translate(...)">` popped with `origin: "Xpx Ypx"` lost its translate and jumped to the top-left corner.
+- Fix: give the tweened id to an outer `<g>` without a transform and put the translate on an inner `<g>`. Never tween an element that carries its own `transform` attribute.
+
+## SVG attr tween on an element without that attribute (teleport, 2026-10-31)
+- Defect: `tl.to(circle, { attr: { cx, cy } })` on a `<circle>` created without `cx`/`cy` threw
+  `<circle> attribute cx: Unexpected end of attribute` on every seek (`check` console_error).
+- Fix: give every attr-tweened shape its start attributes in markup, and chain with `fromTo` (explicit start,
+  `immediateRender: false`) instead of `to`.
+
+## Labels shorter than the read floor at shot ends (teleport, 2026-10-31)
+- Defect: overlays popped on the last word of a line (`S.at("atoms")`) sat on screen < 1 s before the cut.
+- Fix: clamp the pop time so the label gets 0.5 s + 0.3 s/word before the next cut:
+  `Math.min(S.at(word), S.cut(n) - floor)`, or key it to an earlier word of the same phrase (`S.at("same", 2)`).
+- White text over a light wall: give HUD labels (progress bars) their own dark plate.
+
+## Vertical captions covered the picture (teleport, 2026-10-31)
+- Defect: karaoke captions at 82 px, top 1250 px sat over the mid-frame action (hands, faces, props).
+- Fix (toon.css `.tz-caps`/`.tz-cap`): 66 px, top 1430 px, height 200 px, 11 px stroke. Keeps them just above the
+  Shorts bottom UI zone (last 380 px) and clear of the action band.

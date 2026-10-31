@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../film/assets/lib/toon.css" />
+<style>body{margin:0;background:#cfe4ee;width:1920px;height:900px;position:relative;overflow:hidden}.a{position:absolute;top:20px;width:300px;height:460px}</style></head><body>
+<div class="a" id="a0" style="left:20px"></div><div class="a" id="a1" style="left:340px"></div><div class="a" id="a2" style="left:660px"></div><div class="a" id="a3" style="left:980px"></div><div class="a" id="a4" style="left:1300px"></div><div class="a" id="a5" style="left:1620px"></div>
+<script src="../film/assets/lib/gsap.min.js"></script><script src="../film/assets/lib/toon.js"></script><script src="../film/assets/lib/cast.js"></script><script src="../film/assets/lib/kit.js"></script>
+<script>
+const C=TOON.CAST; const specs=[C.me,Object.assign({},C.me,{back:true}),C.scientist,C.exec,C.worker,C.me];
+const rigs=specs.map((s,i)=>TOON.actor(document.getElementById("a"+i),s));
+const tl=gsap.timeline({paused:true}); const K=KIT("x-",tl);
+K.walk(rigs[5],0,2,12); TOON.pose(tl,rigs[3],0,"point"); tl.seek(0.14);
+</script></body></html>

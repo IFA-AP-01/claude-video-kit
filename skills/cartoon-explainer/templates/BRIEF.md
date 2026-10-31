@@ -8,7 +8,7 @@ stops only at the checkpoints in §6. To change something midway, edit this file
 VOICE=voice.mp3        # voice file in the project folder
 SCRIPT=script.txt      # script; a [Tag] on its own line starts a section (= one scene)
 LANGUAGE=vi            # voice language for alignment (vi, en, ...)
-TEMPO=1.0              # voice speed, applied BEFORE alignment
+TEMPO=0.88             # voice speed, applied BEFORE alignment (TTS reads feel rushed above ~185 wpm)
 END_HOLD=1.5           # seconds held after the last word
 INTRO=4.5              # quiet opening: seconds before the first word (own `intro` scene); 0 = none
 PAUSE_SECTION=2.0      # min. pause between scenes, s (the voice is widened with its own room tone)

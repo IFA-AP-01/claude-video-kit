@@ -7,10 +7,10 @@
   const SKIN = { light: "#f3cba5", tan: "#e0a878", brown: "#b07850", dark: "#734a2e" };
   const HAIR = { black: "#2b2622", brown: "#6b4226", blond: "#d9b25f", red: "#a8502a", grey: "#b9bec4", white: "#e9ecef" };
   const OUTFIT = {
-    suit: { coat: "#3c4b66", shade: "#2f3b52", shirt: "#ffffff", tie: "#c8402f" },
-    labcoat: { coat: "#f4f6f8", shade: "#d3dae2", shirt: "#7fa6c9", tie: "#3c4b66" },
-    worker: { coat: "#5f7389", shade: "#4d5f73", shirt: "#5f7389", vest: "#f39a1e", stripe: "#f2f2ee" },
-    casual: { coat: "#d9763a", shade: "#b9612e", shirt: "#d9763a" },
+    suit: { coat: "#3c4b66", shade: "#2f3b52", shirt: "#ffffff", tie: "#c8402f", pants: "#34425a", shoe: "#3a302d" },
+    labcoat: { coat: "#f4f6f8", shade: "#d3dae2", shirt: "#7fa6c9", tie: "#3c4b66", pants: "#4a5873", shoe: "#3a302d" },
+    worker: { coat: "#5f7389", shade: "#4d5f73", shirt: "#5f7389", vest: "#f39a1e", stripe: "#f2f2ee", pants: "#44536a", shoe: "#5a4232" },
+    casual: { coat: "#d9763a", shade: "#b9612e", shirt: "#d9763a", pants: "#3f5274", shoe: "#eeebe4" },
   };
 
   function mulberry32(a) {
@@ -260,6 +260,30 @@
         (cf ? F(cf.d, cuff) + F(cf.shade, mix(cuff, "#5a6a85", 0.22)) : "") +
         hand(hx, 886, side) + `</g></g>`;
     };
+    const pants = o.pants || mix(o.coat, "#000000", 0.25), pshade = mix(pants, "#000000", 0.22), pfold = mix(pants, "#000000", 0.32);
+    const shoe = o.shoe || "#3a302d", sole = mix(shoe, "#000000", 0.3);
+    const leg = (side) => {
+      const out = side === "L" ? 1 : -1, hx = side === "L" ? 250 : 350, kx = side === "L" ? 244 : 356, ax = side === "L" ? 240 : 360;
+      const th = limb(hx, 890, kx, 1130, { out, capA: 30, capB: 0,
+        outer: [[0, 64], [0.3, 62], [0.75, 52], [1, 48]], inner: [[0, 50], [0.4, 48], [0.85, 43], [1, 43]] });
+      const sh = limb(kx, 1130, ax, 1352, { out, capA: 40, capB: 0, hem: true,
+        outer: [[0, 48], [0.25, 48], [0.7, 42], [1, 45]], inner: [[0, 43], [0.3, 43], [0.8, 39], [1, 42]] });
+      const id1 = "tzc" + uid++, id2 = "tzc" + uid++, iv = -out;
+      const hemBand = (() => { const a = sh.fr.pt(0.93, 70), b = sh.fr.pt(0.93, -70), c = sh.fr.pt(1.1, -70), d = sh.fr.pt(1.1, 70);
+        return `M${f1(a[0])} ${f1(a[1])} L${f1(b[0])} ${f1(b[1])} L${f1(c[0])} ${f1(c[1])} L${f1(d[0])} ${f1(d[1])} Z`; })();
+      const sx = ax + out * -8, X = (v) => sx + v * -out * 1.3;
+      const foot = F(`M${X(-40)} 1368 C${X(-44)} 1340 ${X(-28)} 1328 ${X(0)} 1328 C${X(30)} 1328 ${X(58)} 1344 ${X(64)} 1368 C${X(66)} 1384 ${X(54)} 1392 ${X(30)} 1392 L${X(-26)} 1392 C${X(-38)} 1392 ${X(-42)} 1382 ${X(-40)} 1368 Z`, shoe) +
+        F(`M${X(-41)} 1378 L${X(65)} 1376 C${X(64)} 1388 ${X(54)} 1394 ${X(30)} 1394 L${X(-26)} 1394 C${X(-36)} 1394 ${X(-41)} 1388 ${X(-41)} 1378 Z`, sole) +
+        F(`M${X(-22)} 1340 C${X(-6)} 1332 ${X(22)} 1334 ${X(40)} 1344 C${X(20)} 1340 ${X(0)} 1340 ${X(-18)} 1348 Z`, mix(shoe, "#ffffff", 0.3), 'opacity="0.7"');
+      return `<g class="tz-leg${side}"><clipPath id="${id1}"><path d="${th.d}"/></clipPath>` +
+        F(th.d, pants) + `<g clip-path="url(#${id1})">${F(th.shade, pshade)}${F(crease(th.fr, 0.8, 0.98, iv * 36, iv * 10, out * 4), pfold)}</g>` +
+        `<g class="tz-shin${side}"><clipPath id="${id2}"><path d="${sh.d}"/></clipPath>` + foot +
+        `<circle cx="${kx}" cy="1130" r="45" fill="${pants}"/>` + F(sh.d, pants) +
+        `<g clip-path="url(#${id2})">${F(sh.shade, pshade)}${F(crease(sh.fr, 0.02, 0.2, out * 38, out * 12, -out * 3), pfold)}${F(hemBand, pfold)}</g></g></g>`;
+    };
+    const hips = F("M176 870 L424 870 L414 966 Q300 1004 186 966 Z", pants) + F("M300 880 L424 870 L414 966 Q356 990 300 996 Z", pshade);
+    const legsSvg = `<ellipse class="tz-shadow" cx="300" cy="1392" rx="200" ry="22" fill="#1c2430" opacity="0.16"/>` +
+      `<g class="tz-legs">${hips}${leg("L")}${leg("R")}</g>`;
     const eye = (x) => `<g class="tz-pupil"><ellipse cx="${x}" cy="274" rx="15" ry="20" fill="#2c2427"/><circle cx="${x + 5}" cy="266" r="5" fill="#ffffff" opacity="0.9"/></g>`;
     const lids = S("M236 252 Q255 242 274 250", skinShade, 4, 0.7) + S("M326 250 Q345 242 364 252", skinShade, 4, 0.7);
     const glasses = spec.glasses
@@ -297,7 +321,7 @@
       const cap = spec.hair === "bald" ? skin : hc;
       return (
         `<svg class="tz-svg" viewBox="0 0 600 920" xmlns="http://www.w3.org/2000/svg" overflow="visible">` +
-        `<g class="tz-char"><g class="tz-body">` +
+        `<g class="tz-char">` + legsSvg + `<g class="tz-body">` +
         F(TORSO, o.coat) +
         F("M370 456 C420 470 454 498 466 556 L484 920 L392 920 C412 780 414 610 370 456 Z", o.shade) +
         F("M300 470 L304 920 L296 920 Z", mix(o.coat, o.shade, 0.6)) +
@@ -320,7 +344,7 @@
     }
     return (
       `<svg class="tz-svg" viewBox="0 0 600 920" xmlns="http://www.w3.org/2000/svg" overflow="visible">` +
-      `<g class="tz-char"><g class="tz-body">` +
+      `<g class="tz-char">` + legsSvg + `<g class="tz-body">` +
       torso(o, k, neck) +
       `<g class="tz-head">` +
       hairBack(spec.hair, hc, hdk) + chinShadow + ear(skin, skinShade) + face +
@@ -338,6 +362,7 @@
   const ORIGIN = {
     body: "300 920", head: "300 440", eyes: "300 270",
     armL: "182 520", armR: "418 520", foreL: "150 712", foreR: "450 712",
+    feet: "300 1392", legL: "250 890", legR: "350 890", shinL: "244 1130", shinR: "356 1130",
   };
 
   const POSES = {
@@ -370,6 +395,7 @@
       el, spec, flip: !!spec.flip,
       char: q(".tz-char"), body: q(".tz-body"), head: q(".tz-head"), eyes: q(".tz-eyes"), pupils: el.querySelectorAll(".tz-pupil"),
       brows: q(".tz-brows"), armL: q(".tz-armL"), armR: q(".tz-armR"), foreL: q(".tz-foreL"), foreR: q(".tz-foreR"),
+      legs: q(".tz-legs"), legL: q(".tz-legL"), legR: q(".tz-legR"), shinL: q(".tz-shinL"), shinR: q(".tz-shinR"), shadow: q(".tz-shadow"),
       mouth: {}, pose: Object.assign({}, POSES.rest), shape: "rest",
     };
     for (const m of ["rest", "closed", "open", "round", "wide"]) rig.mouth[m] = q(".tz-m-" + m);
@@ -440,7 +466,7 @@
     const n = Math.max(0, Math.floor(span / cyc) - 1);
     tl.fromTo(rig.body, { scaleY: 1 }, { scaleY: 1.012, svgOrigin: ORIGIN.body, duration: cyc, ease: "sine.inOut", repeat: n, yoyo: true }, t0);
     const sw = 2.9 + r() * 0.6, ns = Math.max(0, Math.floor(span / sw) - 1), a = 0.5 + r() * 0.4;
-    tl.fromTo(rig.char, { rotation: -a }, { rotation: a, svgOrigin: ORIGIN.body, duration: sw, ease: "sine.inOut", repeat: ns, yoyo: true }, t0);
+    tl.fromTo(rig.char, { rotation: -a }, { rotation: a, svgOrigin: ORIGIN.feet, duration: sw, ease: "sine.inOut", repeat: ns, yoyo: true }, t0);
     let t = t0 + 0.6 + r() * 1.6;
     while (t < t1 - 0.3) {
       tl.fromTo(rig.eyes, { scaleY: 1 }, { scaleY: 0.08, svgOrigin: ORIGIN.eyes, duration: 0.05, ease: "power1.in" }, t);
@@ -822,7 +848,7 @@
   }
 
   window.TOON = {
-    INK, SKIN, HAIR, OUTFIT, POSES, CAST,
+    INK, SKIN, HAIR, OUTFIT, POSES, CAST, ORIGIN,
     rng: mulberry32, fold, visemes, makeChar,
     scene, actor, talk, idle, pose, gestures, look, brows, setMouth,
     enter, exit, pop, bubble, statPill, kinetic, splitChars, chart, bars, nameCard, pin, camera, parallax, shake, whip, burst, iris, cuts, cue, amb, clip,

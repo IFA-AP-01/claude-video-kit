@@ -179,7 +179,18 @@
         TOON.cue(t + 0.12, "stamp", 0, 0.8);
       };
       const eyesDown = (rig, t, dy, d) => rig.pupils.length && tl.fromTo(rig.pupils, { y: 0 }, { y: dy, duration: d || 0.2, ease: "sine.out" }, t);
-      const walk = (rig, t0, t1, amp) => { for (let t = t0; t < t1 - 0.08; t += 0.14) tl.fromTo(rig.char, { y: 0 }, { y: -(amp || 12), duration: 0.07, ease: "sine.out", yoyo: true, repeat: 1 }, t); };
+      const walk = (rig, t0, t1, amp, step) => {
+        const a = amp || 12, st = step || 0.28, O = TOON.ORIGIN;
+        if (!rig.legL) { for (let t = t0; t < t1 - 0.08; t += 0.14) tl.fromTo(rig.char, { y: 0 }, { y: -a, duration: 0.07, ease: "sine.out", yoyo: true, repeat: 1 }, t); return; }
+        let i = 0;
+        for (let t = t0; t < t1 - st * 0.5; t += st, i++) {
+          const s = i % 2 ? "R" : "L", h = st / 2, sg = s === "L" ? 1 : -1;
+          tl.fromTo(rig["leg" + s], { y: 0, rotation: 0 }, { y: -a * 2.4, rotation: sg * 4, svgOrigin: O["leg" + s], duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
+          tl.fromTo(rig["shin" + s], { scaleY: 1 }, { scaleY: 0.86, svgOrigin: O["shin" + s], duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
+          tl.fromTo(rig.body, { y: 0 }, { y: -a, duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
+          tl.fromTo(rig.body, { rotation: 0 }, { rotation: -sg * 1.6, svgOrigin: O.body, duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
+        }
+      };
       const hop = (el, t, h, d) => tl.fromTo(el, { y: 0 }, { y: -h, duration: d || 0.12, ease: "sine.out", yoyo: true, repeat: 1 }, t);
       const shake = (rig, t, n) => {
         tl.fromTo(rig.head, { rotation: 0 }, { rotation: -6, svgOrigin: "300 440", duration: 0.14, ease: "sine.out" }, t);
