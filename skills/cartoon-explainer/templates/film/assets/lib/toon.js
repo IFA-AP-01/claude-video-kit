@@ -667,7 +667,7 @@
 
   function camera(tl, el, t0, t1, opts) {
     const o = Object.assign({ from: 1, to: 1.07, x0: 0, x1: 0, y0: 0, y1: 0, origin: "50% 50%" }, opts || {});
-    tl.fromTo(el, { scale: o.from, x: o.x0, y: o.y0, transformOrigin: o.origin }, { scale: o.to, x: o.x1, y: o.y1, duration: Math.max(0.05, t1 - t0), ease: "none" }, t0);
+    tl.fromTo(el, { scale: o.from, x: o.x0, y: o.y0, transformOrigin: o.origin }, { scale: o.to, x: o.x1, y: o.y1, duration: Math.max(0.05, t1 - t0), ease: o.ease || "sine.inOut" }, t0);
   }
 
   function parallax(tl, shot, t0, t1, opts) {
@@ -803,11 +803,46 @@
     tl.to(el, { x: 0, y: 0, rotation: 0, duration: 0.2, ease: "sine.out" }, t1 - 0.05);
   }
 
-  function cuts(tl, shots, times) {
+  function cuts(tl, shots, times, opts) {
     shots.forEach((s, i) => {
       tl.set(s, { opacity: i === 0 ? 1 : 0 }, 0);
       if (i > 0) tl.set(s, { opacity: 1 }, times[i]);
       if (i < shots.length - 1) tl.set(s, { opacity: 0 }, times[i + 1]);
+    });
+    if (!(opts && opts.cine === false)) cine(tl, shots, times, opts && opts.end);
+  }
+
+  // Film-camera depth on every shot (the user wants each shot cinematic): far/near planes drift against the mid
+  // plane, a soft foreground prop slides past the lens, and the background racks into focus at the cut.
+  // Planes that already carry x tweens are left alone; data-nocine="1" on a shot skips it, "lens" skips the prop.
+  const FG_IN = /apartment|bedroom|office|hallway|desk_night|lab|server|factory/, FG_OUT = /street|night_town/;
+  function cine(tl, shots, times, end) {
+    const T1 = end || Math.max(tl.duration(), times[times.length - 1] + 2);
+    const hasX = (el) => tl.getTweensOf(el).some((tw) => tw.vars && ("x" in tw.vars || "y" in tw.vars));
+    const hasF = (el) => el.style.filter || tl.getTweensOf(el).some((tw) => tw.vars && "filter" in tw.vars);
+    shots.forEach((s, i) => {
+      const no = s.getAttribute("data-nocine") || "";
+      if (no === "1") return;
+      const t0 = times[i], t1 = i + 1 < shots.length ? times[i + 1] : T1, d = t1 - t0;
+      if (!(d > 0.4)) return;
+      const r = mulberry32(31 + i * 17 + Math.round(t0 * 100)), dir = i % 2 ? -1 : 1;
+      const A = 70 * Math.min(1.5, Math.max(0.6, d / 4)), dy = (r() - 0.5) * A * 0.5;
+      const far = s.querySelector(".tz-far"), near = s.querySelector(".tz-near"), cam = s.querySelector(".tz-cam");
+      if (far && !hasX(far)) tl.fromTo(far, { x: dir * A * 0.4, y: dy * 0.4, scale: 1.08, transformOrigin: "50% 50%" }, { x: -dir * A * 0.4, y: -dy * 0.4, scale: 1.08, duration: d, ease: "sine.inOut", immediateRender: false }, t0);
+      if (near && near.childElementCount && !hasX(near)) tl.fromTo(near, { x: -dir * A * 0.9, y: -dy }, { x: dir * A * 0.9, y: dy, duration: d, ease: "sine.inOut", immediateRender: false }, t0);
+      if (far && d > 2.4 && !hasF(far)) tl.fromTo(far, { filter: "blur(6px)" }, { filter: "blur(0px)", duration: 0.8, ease: "power2.out", immediateRender: false }, t0);
+      const bg = far && far.querySelector("img.tz-bg"), src = bg ? bg.getAttribute("src") : "";
+      if (!cam || no === "lens" || !src || !(FG_IN.test(src) || FG_OUT.test(src))) return;
+      const pick = FG_OUT.test(src) ? "fg_branch" : ["fg_plant", "fg_lamp"][Math.floor(r() * 2)], flip = r() < 0.5;
+      const lens = document.createElement("div");
+      lens.className = "tz-lens";
+      lens.style.cssText = "position:absolute;inset:0;pointer-events:none";
+      const fx = document.createElement("div");
+      fx.style.cssText = "position:absolute;inset:0;transform:" + (flip ? "scaleX(-1)" : "none") + " scale(1.18);transform-origin:50% 50%;filter:blur(4px)";
+      fx.innerHTML = '<img class="tz-fg" alt="" src="assets/bg/' + pick + '.soft.png">';
+      lens.appendChild(fx);
+      cam.parentNode.insertBefore(lens, cam.nextSibling);
+      tl.fromTo(lens, { x: -dir * A * 2.4, y: -dy * 1.5 }, { x: dir * A * 2.4, y: dy * 1.5, duration: d, ease: "sine.inOut", immediateRender: false }, t0);
     });
   }
 
@@ -851,7 +886,7 @@
     INK, SKIN, HAIR, OUTFIT, POSES, CAST, ORIGIN,
     rng: mulberry32, fold, visemes, makeChar,
     scene, actor, talk, idle, pose, gestures, look, brows, setMouth,
-    enter, exit, pop, bubble, statPill, kinetic, splitChars, chart, bars, nameCard, pin, camera, parallax, shake, whip, burst, iris, cuts, cue, amb, clip,
+    cine, enter, exit, pop, bubble, statPill, kinetic, splitChars, chart, bars, nameCard, pin, camera, parallax, shake, whip, burst, iris, cuts, cue, amb, clip,
     stage, move, bob,
   };
 })();

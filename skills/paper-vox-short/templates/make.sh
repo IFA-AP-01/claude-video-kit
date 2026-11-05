@@ -2,7 +2,7 @@
 # Paper Vox Short — one driver for every step (settings from the ```ini block in BRIEF.md).
 #
 #   ./make.sh setup            npm install + uv sync (+ Resemble Enhance when ENHANCE resolves to yes)
-#   ./make.sh voice            [enhance] → master → tempo + end hold → audio/out/voice_master.wav
+#   ./make.sh voice            [enhance] → defry → master → tempo + end hold → audio/out/voice_master.wav
 #   ./make.sh align            script → lines.txt → whisper → align → qa → captions  (data/*.json)
 #   ./make.sh captions         captions only (after editing analysis/caption_rules.json)
 #   ./make.sh preview          Vite dev server on :5173 (in Claude: preview_start instead)
@@ -18,13 +18,13 @@ cd "$(dirname "$0")"
 ROOT=$PWD
 
 # ---------------------------------------------------------------- settings from BRIEF.md
-VOICE=voice.mp3 SCRIPT=script.txt ENHANCE=auto TEMPO=1.0 END_HOLD=1.5 WARMTH=1 LOUDNESS=-14 SFX_DB=3
+VOICE=voice.mp3 SCRIPT=script.txt ENHANCE=auto TEMPO=1.0 END_HOLD=1.5 WARMTH=0 DEFRY=1 DECLICK=1 MASTER=light LOUDNESS=-14 SFX_DB=3
 MUSIC= MUSIC_DB=-20
 if [[ -f BRIEF.md ]]; then
   while IFS='=' read -r k v; do
     v=${v%%#*}; v=${v//[[:space:]]/}
     [[ -n $v ]] && printf -v "$k" '%s' "$v"
-  done < <(grep -E '^(VOICE|SCRIPT|ENHANCE|TEMPO|END_HOLD|WARMTH|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB)=' BRIEF.md)
+  done < <(grep -E '^(VOICE|SCRIPT|ENHANCE|TEMPO|END_HOLD|WARMTH|DEFRY|DECLICK|MASTER|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB)=' BRIEF.md)
 fi
 
 NICE=(nice -n 10)
@@ -82,9 +82,25 @@ cmd_voice() {
     "${NICE[@]}" audio/.venv/bin/python audio/enhance.py "$VOICE" audio/out/voice_enhanced.wav
     src=audio/out/voice_enhanced.wav
   fi
+  if [[ ${DEFRY:-1} != 0 ]]; then
+    say "defry (vocal-fry repair, strength $DEFRY)"
+    "${NICE[@]}" audio/.venv/bin/python audio/defry.py "$src" audio/out/voice_defry.wav \
+      --strength "$DEFRY" --report data/defry.json --ab out/ab
+    src=audio/out/voice_defry.wav
+  fi
+  if [[ ${DECLICK:-1} != 0 ]]; then
+    say "declick (vocoder clicks, above 3 kHz only)"
+    "${NICE[@]}" audio/.venv/bin/python audio/declick.py "$src" audio/out/voice_declick.wav
+    src=audio/out/voice_declick.wav
+  fi
+  if [[ ${MASTER:-light} == light ]]; then
+    say "master light (loudness $LOUDNESS LUFS, no EQ/dynamics)"
+    "${NICE[@]}" audio/.venv/bin/python audio/light_master.py "$src" audio/out/1.0x/voice_master.wav --loudness "$LOUDNESS"
+  else
   say "master (warmth $WARMTH, $LOUDNESS LUFS)"
   "${NICE[@]}" audio/.venv/bin/python audio/master.py "$src" audio/out/1.0x/voice_master.wav \
-    --warmth "$WARMTH" --loudness "$LOUDNESS"
+    --warmth "$WARMTH" --low-trim "$LOW_TRIM" --loudness "$LOUDNESS"
+  fi
   say "tempo $TEMPO + end hold $END_HOLD s"
   audio/.venv/bin/python audio/tempo.py "$TEMPO" --hold "$END_HOLD"
   # 10 s A/B at equal loudness: original vs final master (listen once, BRIEF §7)

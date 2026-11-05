@@ -9,6 +9,7 @@ dependencies = [
     "numpy<2",
     "omegaconf>=2.4.0",
     "pandas>=3.0.6",
+    "praat-parselmouth==0.4.7",
     "resampy>=0.4.3",
     "rich>=15.0.0",
     "scipy>=1.17.1",

@@ -48,7 +48,44 @@ LEVEL = {"stamp": -13, "slap": -19, "paper": -23, "tape": -22, "whoosh": -24, "t
          "cross": -23, "fan": -29, "hiss": -24, "pop": -24,
          "spell": -22, "blast": -16, "thunder": -17, "clang": -21, "warp": -22,
          "night": -18, "traffic": -18, "crowd": -18, "family": -18, "office": -20, "room": -22,
-         "laugh": -18, "cackle": -18}
+         "laugh": -18, "cackle": -18,
+         "step": -31, "hop": -28, "slide": -28, "creak": -29, "coin": -28}
+
+# tone policy: in tender scenes (every scene not listed in --light) comic kinds read as jokes, so they are
+# dropped or swapped for a soft paper rustle; light (ironic) scenes keep them, a step softer
+COMIC_DROP = {"slap", "hop", "slide", "laugh", "cackle"}
+COMIC_SOFT = {"pop": "paper", "stamp": "paper"}
+TENDER_TRIM = {"tick": -6, "whoosh": -6, "clang": -6, "paper": -4}
+LIGHT_TRIM = {"pop": -5, "stamp": -6, "slap": -4, "hop": -4}
+
+# real recorded samples (audio/sfxlib/<kind>_NN.wav) replace the synth voice of a kind; variants rotate per cue
+SAMPLE_DIR = ROOT / "audio/sfxlib"
+SAMPLE_MAX = 2.5       # long tails (booms) are cut here with a fade unless the cue passes dur
+_samples = {}
+
+
+def samples(kind):
+    if kind not in _samples:
+        out = []
+        for f in sorted(SAMPLE_DIR.glob(f"{kind}_*.wav")):
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(f), "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
+                                 capture_output=True, check=True).stdout
+            y = np.frombuffer(raw, np.float32).astype(np.float64)
+            on = int(np.argmax(np.abs(y) > np.abs(y).max() * 0.05))
+            y = y[max(0, on - int(0.005 * SR)):]
+            out.append(y / (np.abs(y).max() + 1e-12))
+        _samples[kind] = out
+    return _samples[kind]
+
+
+def sample(kind, i, dur):
+    v = samples(kind)
+    y = v[i % len(v)].copy()
+    n = min(len(y), int((dur or SAMPLE_MAX) * SR))
+    y = y[:n]
+    fo = min(n, int(0.12 * SR))
+    y[n - fo:] *= np.cos(np.linspace(0, np.pi / 2, fo)) ** 2
+    return y
 DUCK_DB = 5.0          # SFX dip this much while the narrator speaks
 MUSIC_DUCK_DB = 6.0    # music dips this much while the narrator speaks
 MUSIC_FADE_IN, MUSIC_FADE_OUT = 0.5, 2.0
@@ -335,6 +372,8 @@ def main():
     ap.add_argument("--music-db", type=float, default=-20.0)
     ap.add_argument("--music-start", type=float, default=0.0)
     ap.add_argument("--stings", default="")
+    ap.add_argument("--light", default=None, type=lambda v: set(filter(None, v.split(","))))
+    ap.add_argument("--loudness", type=float, default=TARGET_LUFS)
     a = ap.parse_args()
 
     voice, sr = sf.read(ROOT / "audio/out/voice_master.wav", always_2d=True)
@@ -360,13 +399,35 @@ def main():
             place(bus, one_shot(c, v_rms), c["t"])
             counts["clip:" + c["file"]] = counts.get("clip:" + c["file"], 0) + 1
             continue
-        if kind not in sfx.VOICES:
+        trim = 0.0
+        if a.light is None:
+            pass
+        elif c.get("scene") not in a.light and kind not in ("amb", "clip"):
+            if kind in COMIC_DROP:
+                counts["drop:" + kind] = counts.get("drop:" + kind, 0) + 1
+                continue
+            if kind in COMIC_SOFT:
+                kind = COMIC_SOFT[kind]
+                trim -= 6
+            trim += TENDER_TRIM.get(kind, 0)
+        else:
+            trim += LIGHT_TRIM.get(kind, 0)
+        if samples(kind):
+            counts.setdefault("~" + kind, 0)
+            y = sample(kind, counts["~" + kind], c.get("dur") if kind not in ("pop", "tick", "stamp", "step", "coin") else None)
+            counts["~" + kind] += 1
+        elif kind in sfx.VOICES:
+            y = sfx.render(kind, 7919 * i + 17, c.get("dur"))
+        else:
             print(f"  skip unknown kind {kind!r} at {c['t']}")
             continue
-        y = sfx.render(kind, 7919 * i + 17, c.get("dur"))
-        g = 10 ** ((LEVEL[kind] + a.sfx_db) / 20) * float(c.get("gain", 1.0))
+        g = 10 ** ((LEVEL[kind] + a.sfx_db + trim) / 20) * float(c.get("gain", 1.0))
         pan = float(np.clip(c.get("x", 0.0), -1, 1)) * MAX_PAN
         lr = np.array([np.cos((pan + 1) * np.pi / 4), np.sin((pan + 1) * np.pi / 4)]) * np.sqrt(2)
+        if y.ndim == 1:
+            y = y[:, None]
+        elif y.shape[1] == 2:
+            y = y.mean(axis=1, keepdims=True)
         place(bus, y * g * lr, c["t"])
         counts[kind] = counts.get(kind, 0) + 1
 
@@ -402,14 +463,14 @@ def main():
         assert np.all(np.isfinite(mix)), "mix has NaN/inf samples"
         sf.write(raw, mix, SR, subtype="FLOAT")
         I, _ = ffmpeg_loudness(raw)
-        gain = TARGET_LUFS - I
+        gain = a.loudness - I
         out = Path(a.out)
         lim = 10 ** ((TP_LIMIT - 0.3) / 20)
         subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(raw), "-af",
                         f"volume={gain:.2f}dB,aresample=192000,alimiter=limit={lim:.4f}:attack=1:release=60:"
                         f"level=disabled,aresample=48000", "-c:a", "pcm_s24le", str(out)], check=True)
     I, TP = ffmpeg_loudness(out)
-    print("cues: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    print("cues: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items()) if k[0] != "~"))
     print(f"wrote {out.name}  I {I:.1f} LUFS  TP {TP:.1f} dBTP  ({len(mix) / SR:.2f} s)")
 
 

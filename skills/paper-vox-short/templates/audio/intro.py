@@ -8,7 +8,7 @@ shifts every time in data/words.json (lines, words, sections, extras, duration) 
 t by the same amount. A minimum, so a second run adds nothing. words.json "intro" records the target.
 """
 import argparse
-import json
+import json, sys
 from pathlib import Path
 
 import numpy as np
@@ -46,19 +46,28 @@ def main():
     W = json.loads(wp.read_text())
     first = min(w["start"] for l in W["lines"] for w in l["words"])
     pad = round(a.intro - first, 3)
-    if pad <= 0.0005:
-        print(f"intro: first word at {first:.2f} s, nothing to add")
+    if abs(pad) <= 0.0005:
+        print(f"intro: first word at {first:.2f} s, nothing to change")
         return
     vp = ROOT / "audio/out/voice_master.wav"
     x, sr = sf.read(vp, always_2d=True)
     info = sf.info(vp)
-    n = int(round(pad * sr))
-    tone = room_tone(x, sr, first, n)
-    xf = int(XF * sr)
-    fade = np.sin(np.linspace(0, np.pi / 2, xf))[:, None] ** 2
-    head = tone.copy()
-    head[:xf] *= fade
-    sf.write(vp, np.concatenate([head, x]), sr, subtype=info.subtype)
+    if pad < 0:
+        if a.intro < 0.3:
+            sys.exit("intro: refusing to trim closer than 0.3 s to the first word")
+        cut = int(round(-pad * sr))
+        xf = int(XF * sr)
+        y = x[cut:].copy()
+        y[:xf] *= (np.sin(np.linspace(0, np.pi / 2, xf)) ** 2)[:, None]
+        sf.write(vp, y, sr, subtype=info.subtype)
+    else:
+        n = int(round(pad * sr))
+        tone = room_tone(x, sr, first, n)
+        xf = int(XF * sr)
+        fade = np.sin(np.linspace(0, np.pi / 2, xf))[:, None] ** 2
+        head = tone.copy()
+        head[:xf] *= fade
+        sf.write(vp, np.concatenate([head, x]), sr, subtype=info.subtype)
 
     sh = lambda t: round(t + pad, 3)
     for l in W["lines"]:
@@ -78,9 +87,10 @@ def main():
     if sp.exists():
         P = json.loads(sp.read_text())
         for c in P.get("cues", []):
-            c["t"] = sh(c["t"])
+            if "t" in c:
+                c["t"] = sh(c["t"])
         sp.write_text(json.dumps(P, indent=2))
-    print(f"intro: added {pad:.2f} s of room tone, first word now at {a.intro:.2f} s")
+    print(f"intro: {'added' if pad > 0 else 'trimmed'} {abs(pad):.2f} s of room tone, first word now at {a.intro:.2f} s")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,11 @@
     TOON.POSES.lift = { armL: 0, foreL: 0, armR: -20, foreR: 130, head: 3 };
     const sp = (base, o) => Object.assign({}, typeof base === "string" ? TOON.CAST[base] : base, o || {});
     const coat = (a, b) => ({ coat: a, shade: b, shirt: a });
+    const tone = (c, k) => {
+      if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+      const n = parseInt(c.slice(1), 16), t = k < 0 ? 0 : 255, a = Math.abs(k);
+      return "#" + [16, 8, 0].map((sh) => { const v = (n >> sh) & 255; return Math.round(v + (t - v) * a).toString(16).padStart(2, "0"); }).join("");
+    };
       const CLOUD = (x, y, s, a, b) =>
         `<g class="kit-cloud"><ellipse cx="${x}" cy="${y + 8 * s}" rx="${130 * s}" ry="${40 * s}" fill="${b || "#e6ecf2"}"/><ellipse cx="${x}" cy="${y}" rx="${126 * s}" ry="${40 * s}" fill="${a || "#fbfaf6"}"/>` +
         `<circle cx="${x - 52 * s}" cy="${y - 18 * s}" r="${46 * s}" fill="${a || "#fbfaf6"}"/><circle cx="${x + 26 * s}" cy="${y - 34 * s}" r="${60 * s}" fill="${a || "#fbfaf6"}"/><circle cx="${x + 80 * s}" cy="${y - 6 * s}" r="${38 * s}" fill="${a || "#fbfaf6"}"/></g>`;
@@ -169,7 +174,7 @@
       const DRAGON = (id) => `<defs><clipPath id="${P}${id}dbody"><path d="M214 112 C238 118 252 136 250 156 C248 180 224 196 188 198 C150 200 116 192 104 172 C94 156 104 132 128 122 C152 112 190 106 214 112 Z"/></clipPath><clipPath id="${P}${id}dhead"><path d="M265 50 C296 50 318 66 324 90 C328 104 332 118 326 130 C320 140 308 146 300 150 C292 160 280 164 265 164 C250 164 238 160 230 150 C222 146 210 140 204 130 C198 118 202 104 206 90 C212 66 234 50 265 50 Z"/></clipPath><clipPath id="${P}${id}dtail"><path d="M112 146 C86 138 60 124 40 112 C34 109 30 112 32 118 C50 136 78 160 110 182 Z"/></clipPath></defs><g class="kit-wingB"><path d="M178 112 L160 44 Q124 32 84 34 Q110 54 88 74 Q118 80 112 102 Q136 102 148 116 Z" fill="#e48a84"/><path d="M178 112 L160 44 L112 102 Q136 102 148 116 Z" fill="#d27470" opacity="0.55"/><path d="M175 113 L157 45 L163 43 L181 111 Z M160 44 L86 33 L86 36 Z M160 44 L89 73 L91 76 Z M160 44 L111 101 L114 103 Z" fill="#177c8e"/><path d="M152 40 C158 36 166 38 168 46 C162 48 156 46 152 40 Z" fill="#177c8e"/></g><path d="M40 112 C30 104 20 100 8 98 C16 106 20 112 22 118 C16 124 12 130 8 136 C20 134 30 128 38 122 Z" fill="#177c8e"/><path d="M112 146 C86 138 60 124 40 112 C34 109 30 112 32 118 C50 136 78 160 110 182 Z" fill="#27a9bd"/><g clip-path="url(#${P}${id}dtail)"><path d="M20 124 C50 140 80 160 112 176 L112 200 L10 200 Z" fill="#a9e1e8"/></g><path d="M48 123 C49 115 53 110 59 108 C58 116 60 117 62 126 Z" fill="#177c8e"/><path d="M68 133 C69 125 73 118 79 116 C78 124 80 127 82 136 Z" fill="#177c8e"/><path d="M88 142 C89 134 93 125 99 123 C98 131 100 136 102 145 Z" fill="#177c8e"/><path d="M128 125 C130 116 135 108 142 106 C140 115 143 118 146 125 Z" fill="#177c8e"/><path d="M154 118 C156 109 161 99 168 97 C166 106 169 111 172 118 Z" fill="#177c8e"/><path d="M180 114 C182 105 187 95 194 93 C192 102 195 107 198 114 Z" fill="#177c8e"/><path d="M214 112 C238 118 252 136 250 156 C248 180 224 196 188 198 C150 200 116 192 104 172 C94 156 104 132 128 122 C152 112 190 106 214 112 Z" fill="#27a9bd"/><g clip-path="url(#${P}${id}dbody)"><path d="M90 140 C112 168 156 184 214 186 L214 220 L80 220 Z" fill="#1e92a6"/><path d="M250 146 C240 176 214 190 184 192 C156 194 130 188 116 176 C146 182 180 180 206 170 C226 162 240 152 250 146 Z" fill="#a9e1e8"/><path d="M152 182 C155 187 155 192 153 196" fill="none" stroke="#8ccfd8" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/><path d="M178 180 C181 185 181 190 179 194" fill="none" stroke="#8ccfd8" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/><path d="M204 172 C207 177 207 182 205 186" fill="none" stroke="#8ccfd8" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/><path d="M226 162 C229 167 229 172 227 176" fill="none" stroke="#8ccfd8" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/><path d="M128 128 C156 114 194 108 220 116 C196 116 164 122 138 136 Z" fill="#5cc4d3"/></g><path d="M112 162 C110 140 138 130 156 144 C172 158 166 184 148 194 C130 202 114 188 112 162 Z" fill="#27a9bd"/><path d="M112 162 C114 180 128 196 148 194 C160 188 166 176 166 166 C156 180 132 182 112 162 Z" fill="#1e92a6"/><path d="M132 188 C124 196 126 206 136 207 L166 207 C174 207 176 200 168 195 C160 190 146 186 132 188 Z" fill="#177c8e"/><path d="M164 207 L176 210 L168 201 Z M154 207 L164 211 L158 202 Z M144 207 L152 211 L148 202 Z" fill="#8fd5de"/><path d="M212 166 C222 162 234 168 236 180 L234 196 C232 202 222 204 214 200 C210 190 208 178 212 166 Z" fill="#27a9bd"/><path d="M214 200 C222 204 232 202 234 196 L235 186 C228 192 220 194 212 190 Z" fill="#1e92a6"/><path d="M210 196 C206 204 212 210 222 210 L240 208 C246 206 246 199 238 197 C230 194 218 193 210 196 Z" fill="#177c8e"/><path d="M238 208 L248 211 L242 202 Z M230 209 L238 213 L234 204 Z M222 210 L228 214 L226 205 Z" fill="#8fd5de"/><g class="kit-wingF"><path d="M196 116 L178 34 Q136 18 96 14 Q126 40 98 62 Q132 70 128 96 Q154 96 166 114 Z" fill="#f6a49a"/><path d="M196 116 L178 34 L128 96 Q154 96 166 114 Z" fill="#e48a84" opacity="0.55"/><path d="M178 34 L98 62 Q132 70 128 96 Z" fill="#e48a84" opacity="0.3"/><path d="M192 117 L174 35 L182 33 L200 115 Z" fill="#1e92a6"/><path d="M178 34 L96 13 L96 16 Z M178 34 L99 61 L100 64 Z M178 34 L127 95 L130 97 Z" fill="#1e92a6"/><path d="M170 30 C176 24 186 26 188 36 C180 40 172 38 170 30 Z" fill="#1e92a6"/><path d="M176 32 L184 14 L186 32 Z" fill="#177c8e"/></g><path d="M230 62 C220 46 214 28 216 8 C230 22 244 40 252 56 Z" fill="#177c8e"/><path d="M216 8 C230 22 244 40 252 56 L244 58 C236 42 226 26 216 8 Z" fill="#0f6878"/><path d="M220 38 L232 34 M223 48 L238 44" stroke="#0f6878" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M210 96 L176 76 Q186 90 178 100 Q190 106 182 118 Q198 118 212 120 Z" fill="#f6a49a"/><path d="M206 104 L182 84 M206 110 L184 108" stroke="#e48a84" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M300 62 C310 46 316 28 314 8 C300 22 286 40 278 56 Z" fill="#177c8e"/><path d="M314 8 C300 22 286 40 278 56 L286 58 C294 42 304 26 314 8 Z" fill="#0f6878"/><path d="M310 38 L298 34 M307 48 L292 44" stroke="#0f6878" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M320 96 L354 76 Q344 90 352 100 Q340 106 348 118 Q332 118 318 120 Z" fill="#f6a49a"/><path d="M324 104 L348 84 M324 110 L346 108" stroke="#e48a84" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M256 56 C256 44 260 34 268 26 C268 36 272 46 276 54 Z" fill="#177c8e"/><path d="M265 50 C296 50 318 66 324 90 C328 104 332 118 326 130 C320 140 308 146 300 150 C292 160 280 164 265 164 C250 164 238 160 230 150 C222 146 210 140 204 130 C198 118 202 104 206 90 C212 66 234 50 265 50 Z" fill="#27a9bd"/><g clip-path="url(#${P}${id}dhead)"><path d="M296 50 C318 70 326 100 320 126 C314 146 298 158 280 166 L344 170 L344 40 Z" fill="#1e92a6"/><path d="M226 72 C238 58 254 52 270 52 C254 60 240 68 232 82 Z" fill="#5cc4d3"/><path d="M238 140 C244 128 254 122 265 122 C276 122 286 128 292 140 C294 154 280 162 265 162 C250 162 236 154 238 140 Z" fill="#8fd5de"/><path d="M282 126 C290 132 294 142 290 152 C286 158 278 162 270 162 C282 152 286 140 282 126 Z" fill="#7cc7d1"/></g><path d="M222 104 C222 88 240 80 256 86 C264 90 264 100 262 106 C250 96 236 96 222 104 Z" fill="#8fd5de"/><path d="M244 95 C255 95 260 104 260 113 C260 123 253 128 244 128 C235 128 228 122 228 112 C228 103 234 95 244 95 Z" fill="#3a4047"/><path d="M244 104 C250 104 253 110 253 115 C253 121 249 124 244 124 C239 124 236 120 236 115 C236 109 239 104 244 104 Z" fill="#56636f"/><path d="M224 128 C230 124 240 126 244 132 C236 136 228 134 224 128 Z" fill="#f39a92" opacity="0.85"/><path d="M308 104 C308 88 290 80 274 86 C266 90 266 100 268 106 C280 96 294 96 308 104 Z" fill="#8fd5de"/><path d="M286 95 C275 95 270 104 270 113 C270 123 277 128 286 128 C295 128 302 122 302 112 C302 103 296 95 286 95 Z" fill="#3a4047"/><path d="M286 104 C280 104 277 110 277 115 C277 121 281 124 286 124 C291 124 294 120 294 115 C294 109 291 104 286 104 Z" fill="#56636f"/><path d="M306 128 C300 124 290 126 286 132 C294 136 302 134 306 128 Z" fill="#f39a92" opacity="0.85"/><circle cx="249" cy="105" r="6" fill="#fff"/><circle cx="291" cy="105" r="6" fill="#fff"/><circle cx="239" cy="118" r="2.4" fill="#fff"/><circle cx="281" cy="118" r="2.4" fill="#fff"/><path d="M256 134 C258 130 262 130 262 134 C261 136 258 137 256 134 Z M274 134 C272 130 268 130 268 134 C269 136 272 137 274 134 Z" fill="#155e6a"/><path d="M252 144 C258 151 272 151 278 144 C276 152 270 156 265 156 C260 156 254 152 252 144 Z" fill="#155e6a"/><path d="M258 151 C262 154 268 154 272 151 C270 155 260 155 258 151 Z" fill="#e48a84"/>`;
       const pop = (el, t, o) => {
         o = Object.assign({ dur: 0.42, sfx: "pop", hold: null, origin: "50% 50%", gain: 1 }, o);
-        const og = /px/.test(o.origin) ? { svgOrigin: o.origin.replace(/px/g, "") } : { transformOrigin: o.origin };
+        const og = /px/.test(o.origin) ? { svgOrigin: o.origin.replace(/px/g, ""), smoothOrigin: false } : { transformOrigin: o.origin };
         tl.fromTo(el, Object.assign({ scale: 0, opacity: 0 }, og), Object.assign({ scale: 1, opacity: 1, duration: o.dur, ease: "back.out(2.4)" }, og), t);
         if (o.sfx) TOON.cue(t, o.sfx, o.x || 0, o.gain);
         if (o.hold != null) tl.to(el, { scale: 0, opacity: 0, duration: 0.2, ease: "back.in(2)" }, t + o.dur + o.hold);
@@ -179,8 +184,9 @@
         TOON.cue(t + 0.12, "stamp", 0, 0.8);
       };
       const eyesDown = (rig, t, dy, d) => rig.pupils.length && tl.fromTo(rig.pupils, { y: 0 }, { y: dy, duration: d || 0.2, ease: "sine.out" }, t);
-      const walk = (rig, t0, t1, amp, step) => {
+      const walk = (rig, t0, t1, amp, step, o) => {
         const a = amp || 12, st = step || 0.28, O = TOON.ORIGIN;
+        o = o || {};
         if (!rig.legL) { for (let t = t0; t < t1 - 0.08; t += 0.14) tl.fromTo(rig.char, { y: 0 }, { y: -a, duration: 0.07, ease: "sine.out", yoyo: true, repeat: 1 }, t); return; }
         let i = 0;
         for (let t = t0; t < t1 - st * 0.5; t += st, i++) {
@@ -189,9 +195,13 @@
           tl.fromTo(rig["shin" + s], { scaleY: 1 }, { scaleY: 0.86, svgOrigin: O["shin" + s], duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
           tl.fromTo(rig.body, { y: 0 }, { y: -a, duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
           tl.fromTo(rig.body, { rotation: 0 }, { rotation: -sg * 1.6, svgOrigin: O.body, duration: h, ease: "sine.out", yoyo: true, repeat: 1, immediateRender: false }, t);
+          if (o.sfx !== null) TOON.cue(t + st, "step", 0, o.gain || 0.5);
         }
       };
-      const hop = (el, t, h, d) => tl.fromTo(el, { y: 0 }, { y: -h, duration: d || 0.12, ease: "sine.out", yoyo: true, repeat: 1 }, t);
+      const hop = (el, t, h, d, o) => {
+        tl.fromTo(el, { y: 0 }, { y: -h, duration: d || 0.12, ease: "sine.out", yoyo: true, repeat: 1 }, t);
+        if (!o || o.sfx !== null) TOON.cue(t, "hop", 0, (o && o.gain) || 0.3);
+      };
       const shake = (rig, t, n) => {
         tl.fromTo(rig.head, { rotation: 0 }, { rotation: -6, svgOrigin: "300 440", duration: 0.14, ease: "sine.out" }, t);
         tl.fromTo(rig.head, { rotation: -6 }, { rotation: 6, svgOrigin: "300 440", duration: 0.24, ease: "sine.inOut", yoyo: true, repeat: n * 2 - 2 }, t + 0.14);
@@ -278,6 +288,173 @@
         Object.assign(el.style, { width: 600 * sc + "px", height: 920 * sc + "px", left: o.cx - 300 * sc + "px", top: o.cy - fy * sc + "px", bottom: "auto" });
       };
 
-    return { HANDS, povArm, LIDS, lids, lidsInit, blink, closeup, sp, coat, CLOUD, TREE, GLOW, LAND, BAMBOO, PADDY, LANTERN, ARECA, JAR, HOUSE, COURT, BUF, HAT, hat, THINK, FACE, BANG, STAR, SPARK, PILL, CHECK, CUP, BOWL, DRAGON, pop, stamp, eyesDown, walk, hop, shake, sip, STEAM, steam };
+    function chapter(el, n, title, t0, t1) {
+      el.classList.add("tz-chapter");
+      el.innerHTML = '<div class="k">Chapter ' + n + '</div><div class="t">' + title + '</div><div class="rule"></div>';
+      const [k, tt, rule] = el.children;
+      tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "sine.out" }, t0);
+      tl.fromTo(k, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.9, ease: "sine.out" }, t0 + 0.15);
+      tl.fromTo(tt, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 1.1, ease: "sine.out" }, t0 + 0.4);
+      tl.fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: "power2.out" }, t0 + 0.7);
+      tl.to(el, { opacity: 0, duration: 0.6, ease: "sine.in" }, t1 - 0.6);
+      TOON.cue(t0 + 0.2, "whoosh", 0, 0.35);
+    }
+
+
+      // ---- Top-down (bird's-eye) props. TOPSEAT(id, x, y, phi, o): a person seated at a table, seen from above,
+      // at angle phi (deg) around the table centre, facing it. Groups #<P><id> (whole), #<P><id>h (head),
+      // #<P><id>aL / #<P><id>aR (forearms, pivot at the shoulder). o: { hair, hairCol, coat, skin, sticks }.
+      const TOPSEAT = (id, x, y, phi, o) => {
+        o = Object.assign({ hair: "short", hairCol: "#2c2427", coat: "#3f6fa8", skin: "#f0c49c", sticks: true }, o);
+        const sh = tone(o.coat, -0.18), sk = o.skin, hc = o.hair === "bald" ? sk : o.hairCol, g = P + id;
+        const arm = (side) => {
+          const m = side === "L" ? -1 : 1;
+          let a = `<g id="${g}a${side}">` +
+            `<path d="M${m * 70} -18 C${m * 84} -54 ${m * 70} -96 ${m * 46} -122 L${m * 22} -108 C${m * 40} -86 ${m * 48} -56 ${m * 36} -20 Z" fill="${o.coat}"/>` +
+            `<path d="M${m * 46} -122 L${m * 22} -108 L${m * 30} -100 L${m * 52} -114 Z" fill="${sh}"/>` +
+            `<ellipse cx="${m * 34}" cy="-126" rx="16" ry="18" fill="${sk}"/><ellipse cx="${m * 38}" cy="-122" rx="9" ry="10" fill="${tone(sk, -0.12)}" opacity="0.6"/>`;
+          if (side === "R" && o.sticks) a += `<path d="M38 -126 L4 -232" stroke="#a87b52" stroke-width="5" stroke-linecap="round"/><path d="M44 -124 L18 -232" stroke="#94683f" stroke-width="5" stroke-linecap="round"/>`;
+          return a + "</g>";
+        };
+        let b = `<g id="${g}" transform="translate(${x} ${y}) rotate(${phi - 90})">` +
+          `<ellipse cx="6" cy="20" rx="104" ry="62" fill="#1a1020" opacity="0.18"/>` +
+          `<path d="M-96 8 C-96 -30 -60 -48 0 -48 C60 -48 96 -30 96 8 C96 48 56 62 0 62 C-56 62 -96 48 -96 8 Z" fill="${o.coat}"/>` +
+          `<path d="M-96 8 C-96 48 -56 62 0 62 C56 62 96 48 96 8 C80 34 50 44 0 44 C-50 44 -80 34 -96 8 Z" fill="${sh}"/>` +
+          arm("L") + arm("R") +
+          `<g id="${g}h"><ellipse cx="-47" cy="-6" rx="8" ry="12" fill="${tone(sk, -0.1)}"/><ellipse cx="47" cy="-6" rx="8" ry="12" fill="${tone(sk, -0.1)}"/>` +
+          `<circle cx="0" cy="-8" r="46" fill="${sk}"/><ellipse cx="0" cy="-50" rx="9" ry="6" fill="${tone(sk, -0.08)}"/>` +
+          `<path d="M-46 -2 C-50 -40 -26 -54 0 -54 C26 -54 50 -40 46 -2 C46 26 26 38 0 38 C-26 38 -46 26 -46 -2 Z" fill="${hc}"/>` +
+          `<path d="M-30 -30 C-18 -42 6 -46 22 -38" stroke="#ffffff" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.16"/>` +
+          (o.hair === "bun" ? `<circle cx="0" cy="40" r="20" fill="${hc}"/><circle cx="-5" cy="36" r="7" fill="#ffffff" opacity="0.14"/>` : "") +
+          `</g></g>`;
+        return b;
+      };
+      // TOPTABLE(cx, cy, r, phis, o): a round family table from above with a tray meal (rice pot, braised pork,
+      // morning glory, soup, dipping sauce) and a bowl + chopsticks at each seat angle in phis. o: { empty, lone }.
+      const TOPTABLE = (cx, cy, r, phis, o) => {
+        o = o || {};
+        const C = (x, y, rr, f, op) => `<circle cx="${x}" cy="${y}" r="${rr}" fill="${f}"${op != null ? ` opacity="${op}"` : ""}/>`;
+        let b = C(cx + 14, cy + 22, r + 10, "#1a1020", 0.2) + C(cx, cy, r, "#8a5634") + C(cx, cy, r - 14, "#a8703f");
+        for (let k = 1; k < 5; k++) b += `<circle cx="${cx}" cy="${cy}" r="${(r - 14) * k / 5}" fill="none" stroke="#8a5634" stroke-width="3" opacity="0.25"/>`;
+        b += `<path d="M${cx - r * 0.7} ${cy - r * 0.62} A${r - 14} ${r - 14} 0 0 1 ${cx + r * 0.5} ${cy - r * 0.78}" stroke="#ffffff" stroke-width="10" fill="none" opacity="0.12" stroke-linecap="round"/>`;
+        const bowl = (x, y, a, full) => `<g transform="translate(${x} ${y}) rotate(${a})">` + C(3, 5, 30, "#1a1020", 0.18) + C(0, 0, 30, "#e6ecf2") +
+          `<circle cx="0" cy="0" r="25" fill="none" stroke="#4a7fb5" stroke-width="4"/>` + (full ? C(0, 0, 21, "#fbfaf6") + C(-6, -5, 8, "#ffffff", 0.7) : C(0, 0, 21, "#d7dee6")) +
+          `<rect x="40" y="-34" width="6" height="74" rx="3" fill="#a87b52"/><rect x="50" y="-32" width="6" height="74" rx="3" fill="#94683f"/></g>`;
+        for (const phi of phis) {
+          const a = phi * Math.PI / 180, rr = r * 0.74;
+          b += bowl(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, phi + 90, !o.empty);
+        }
+        if (o.lone) return b;
+        const tr = r * 0.5;
+        b += C(cx + 6, cy + 10, tr, "#1a1020", 0.15) + C(cx, cy, tr, "#c9a052") + C(cx, cy, tr - 10, "#d9b062");
+        for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2; b += `<path d="M${cx + Math.cos(a) * (tr - 10)} ${cy + Math.sin(a) * (tr - 10)} L${cx + Math.cos(a) * tr} ${cy + Math.sin(a) * tr}" stroke="#b58a3e" stroke-width="3"/>`; }
+        const plate = (x, y, rr, food) => C(x + 3, y + 5, rr, "#1a1020", 0.15) + C(x, y, rr, "#fbfaf6") + C(x, y, rr * 0.8, "#e9eef3") + food;
+        const px = tr * 0.48;
+        let pork = ""; [[-14, -10], [12, -14], [-4, 10], [18, 10], [-20, 14]].forEach(([dx, dy]) => (pork += `<rect x="${cx - px + dx - 11}" y="${cy - px * 0.3 + dy - 11}" width="22" height="22" rx="6" fill="#9a4a24"/><rect x="${cx - px + dx - 11}" y="${cy - px * 0.3 + dy - 11}" width="22" height="7" rx="3" fill="#f2d6b0"/>`));
+        b += plate(cx - px, cy - px * 0.3, 52, C(cx - px, cy - px * 0.3, 40, "#b8652e", 0.55) + pork);
+        let veg = ""; for (let k = 0; k < 14; k++) { const a = k * 2.4; veg += `<path d="M${cx + px + Math.cos(a) * 30} ${cy - px * 0.3 + Math.sin(a) * 26} q${12 * Math.sin(a)} ${-14} ${24 * Math.cos(a)} ${-4}" stroke="${k % 2 ? "#4f8a3a" : "#6fa04a"}" stroke-width="8" stroke-linecap="round" fill="none"/>`; }
+        b += plate(cx + px, cy - px * 0.3, 52, veg);
+        b += C(cx + 4, cy + px * 0.9 + 6, 46, "#1a1020", 0.15) + C(cx, cy + px * 0.9, 46, "#e6ecf2") + C(cx, cy + px * 0.9, 38, "#cfe0a8") +
+          [[-12, -8], [10, -12], [4, 12], [-14, 12]].map(([dx, dy]) => C(cx + dx, cy + px * 0.9 + dy, 8, "#6fa04a")).join("") + C(cx + 16, cy + px * 0.9 + 2, 6, "#e8954a");
+        b += C(cx + 3, cy - px * 0.95 + 4, 40, "#1a1020", 0.15) + C(cx, cy - px * 0.95, 40, "#8a8f96") + C(cx, cy - px * 0.95, 32, "#a4aab2") + C(cx, cy - px * 0.95, 9, "#6f747b");
+        b += C(cx - px * 0.7, cy + px * 0.75, 20, "#e6ecf2") + C(cx - px * 0.7, cy + px * 0.75, 14, "#b8652e") + C(cx - px * 0.7 + 4, cy + px * 0.75 - 3, 3, "#d8463a") + C(cx - px * 0.7 - 4, cy + px * 0.75 + 3, 3, "#d8463a");
+        return b;
+      };
+      // TILES(o): square terracotta floor seen from above, 1920×1080 (o: { col, s }).
+      const TILES = (o) => {
+        o = Object.assign({ col: "#c98a62", s: 120 }, o);
+        let b = `<rect x="-200" y="-200" width="2320" height="1480" fill="${o.col}"/>`;
+        for (let y = -200, j = 0; y < 1280; y += o.s, j++) for (let x = -200, i = 0; x < 2120; x += o.s, i++)
+          b += `<rect x="${x + 3}" y="${y + 3}" width="${o.s - 6}" height="${o.s - 6}" rx="4" fill="${tone(o.col, ((i * 7 + j * 13) % 5 - 2) * 0.025)}"/>`;
+        return b;
+      };
+
+      // ---- Shot builder for scenes built in JS. beats(S, groups): groups = [[line, …], …] (default one per line)
+      // → [{t0, t1, lines}] with t0 = 0 for the first beat. shot(stage, k, o) builds
+      // .tz-shot > shake wrapper > .tz-cam > far / mid / near plus an unzoomed overlay; o: { bg, color, soft }.
+      // The returned object draws layers (svg) and places rigs (actor) with idle + rest pose over [t0, t1].
+      const QM = (x, y, s, col) => `<g><circle cx="${x}" cy="${y}" r="${54 * s}" fill="#fbfaf6"/><text x="${x}" y="${y + 30 * s}" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="${92 * s}" fill="${col || "#4a7fb5"}">?</text></g>`;
+      const NOPE = (x, y, r) => `<g><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#d8463a" stroke-width="${r * 0.16}"/><path d="M${x - r * 0.7} ${y - r * 0.7} L${x + r * 0.7} ${y + r * 0.7}" stroke="#d8463a" stroke-width="${r * 0.16}" stroke-linecap="round"/></g>`;
+      const CLOCK = (x, y, r) => `<g><circle cx="${x}" cy="${y + r * 0.08}" r="${r}" fill="#000" opacity="0.15"/><circle cx="${x}" cy="${y}" r="${r}" fill="#f2b84b"/><circle cx="${x}" cy="${y}" r="${r * 0.8}" fill="#fbfaf6"/>` +
+        Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<circle cx="${x + Math.cos(a) * r * 0.66}" cy="${y + Math.sin(a) * r * 0.66}" r="${r * 0.05}" fill="#9aa6b2"/>`; }).join("") +
+        `<path d="M${x} ${y} L${x} ${y - r * 0.5} M${x} ${y} L${x + r * 0.36} ${y + r * 0.1}" stroke="#2c2427" stroke-width="${r * 0.09}" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="${r * 0.08}" fill="#d8463a"/></g>`;
+      const COINS = (x, y, s) => { let o = ""; for (let i = 0; i < 4; i++) o += `<ellipse cx="${x}" cy="${y - i * 26 * s}" rx="${70 * s}" ry="${24 * s}" fill="#c99a2e"/><ellipse cx="${x}" cy="${y - i * 26 * s - 8 * s}" rx="${70 * s}" ry="${24 * s}" fill="#f2c94c"/>`;
+        return o + `<text x="${x}" y="${y - 96 * s}" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="${40 * s}" fill="#a87b1e" data-layout-ignore>$</text>`; };
+      const PHONE = (x, y, s, inner) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-130" y="-240" width="260" height="480" rx="36" fill="#2f3542"/><rect x="-112" y="-206" width="224" height="412" rx="14" fill="#f4f6f9"/><rect x="-30" y="-226" width="60" height="8" rx="4" fill="#5a6270"/>${inner || ""}</g>`;
+      const GOV = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-220 -120 L0 -230 L220 -120 Z" fill="#d9d2c4"/><rect x="-230" y="-122" width="460" height="26" fill="#c8bfae"/>` +
+        [-170, -85, 0, 85, 170].map((c) => `<rect x="${c - 22}" y="-96" width="44" height="200" fill="#ece6da"/><rect x="${c - 22}" y="-96" width="12" height="200" fill="#d9d2c4"/>`).join("") +
+        `<rect x="-250" y="104" width="500" height="30" fill="#c8bfae"/><rect x="-270" y="134" width="540" height="24" fill="#b8ae9c"/><circle cx="0" cy="-160" r="22" fill="#f2c94c"/></g>`;
+      // TOPWALK(id, x, y, rot, o): a standing/walking person seen from directly above, facing rot (deg, 0 = right).
+      // Groups #<P><id> (whole), #<P><id>fL / fR (feet), #<P><id>aL / aR (arms). o: { hair, hairCol, coat, skin, s }.
+      const TOPWALK = (id, x, y, rot, o) => {
+        o = Object.assign({ hair: "short", hairCol: "#2c2427", coat: "#3f6fa8", skin: "#f0c49c", s: 1, pants: "#3a4152" }, o);
+        const sh = tone(o.coat, -0.18), sk = o.skin, hc = o.hair === "bald" ? sk : o.hairCol, g = P + id;
+        const foot = (sd, m) => `<g id="${g}f${sd}"><ellipse cx="18" cy="${m * 26}" rx="34" ry="17" fill="${o.pants}"/><ellipse cx="44" cy="${m * 26}" rx="16" ry="13" fill="#2c2427"/></g>`;
+        const arm = (sd, m) => `<g id="${g}a${sd}"><ellipse cx="0" cy="${m * 70}" rx="34" ry="20" fill="${o.coat}"/><ellipse cx="-6" cy="${m * 74}" rx="26" ry="12" fill="${sh}"/><circle cx="28" cy="${m * 72}" r="13" fill="${sk}"/></g>`;
+        return `<g id="${g}" transform="translate(${x} ${y}) rotate(${rot}) scale(${o.s})"><ellipse cx="-10" cy="10" rx="70" ry="96" fill="#1a1020" opacity="0.16"/>` +
+          foot("L", -1) + foot("R", 1) + arm("L", -1) + arm("R", 1) +
+          `<ellipse cx="0" cy="0" rx="46" ry="80" fill="${o.coat}"/><ellipse cx="-8" cy="0" rx="34" ry="70" fill="${sh}" opacity="0.5"/>` +
+          `<circle cx="4" cy="0" r="40" fill="${sk}"/><path d="M-36 -2 C-40 -34 -18 -42 6 -42 C30 -42 44 -26 40 -2 C40 22 26 34 4 34 C-20 34 -36 22 -36 -2 Z" fill="${hc}"/>` +
+          (o.hair === "bun" ? `<circle cx="-30" cy="0" r="17" fill="${hc}"/>` : o.hair === "long" ? `<path d="M-36 -30 C-70 -20 -70 20 -36 30 Z" fill="${hc}"/>` : "") +
+          `<path d="M-20 -24 C-6 -32 14 -32 26 -24" stroke="#fff" stroke-width="6" fill="none" opacity="0.16" stroke-linecap="round"/></g>`;
+      };
+      // topStride(id, t0, t1, step): alternate feet and arms of a TOPWALK person.
+      const topStride = (id, t0, t1, step) => {
+        const st = step || 0.3, g = P + id;
+        for (let t = t0, i = 0; t < t1 - st * 0.5; t += st, i++) {
+          const k = i % 2 ? 1 : -1;
+          tl.fromTo([`#${g}fL`, `#${g}aR`], { x: 0 }, { x: 22 * k, duration: st / 2, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, t);
+          tl.fromTo([`#${g}fR`, `#${g}aL`], { x: 0 }, { x: -22 * k, duration: st / 2, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, t);
+          TOON.cue(t + st / 2, "step", 0, 0.35);
+        }
+      };
+      // eyeOpen(R, id, t, o): artistic eye-opening reveal over a shot (lonely / night scenes): lids part, blur clears.
+      const eyeOpen = (R, id, t, o) => {
+        o = Object.assign({ dur: 1.6, blur: 14 }, o);
+        const v = R.svg("over", LIDS(id), "0 0 1080 1920");
+        v.setAttribute("preserveAspectRatio", "none");
+        lidsInit(id, 0.72);
+        lids(id, t + 0.05, 0.4, o.dur * 0.3);
+        lids(id, t + 0.05 + o.dur * 0.3 + 0.1, 0.58, o.dur * 0.15);
+        lids(id, t + 0.05 + o.dur * 0.45 + 0.15, 0, o.dur * 0.5);
+        tl.fromTo(R.cam, { filter: `blur(${o.blur}px)` }, { filter: "blur(0px)", duration: o.dur + 0.3, ease: "power2.out" }, t);
+      };
+      const beats = (S, groups) => {
+        const g = groups || S.lines.map((l, i) => [i]);
+        return g.map((ls, k) => ({ t0: k === 0 ? 0 : S.cut(ls[0]), t1: k + 1 < g.length ? S.cut(g[k + 1][0]) : S.dur, lines: ls }));
+      };
+      const NSV = "http://www.w3.org/2000/svg";
+      const div = (cls, parent, css) => { const d = document.createElement("div"); d.className = cls; if (css) d.style.cssText = css; parent.appendChild(d); return d; };
+      const FILL = "position:absolute;left:0;top:0;width:1920px;height:1080px;";
+      const shot = (stage, k, o) => {
+        o = o || {};
+        const s = div("tz-shot", stage, o.color ? "background:" + o.color : "");
+        s.id = P + "s" + k;
+        const shk = div("", s, FILL), cam = div("tz-cam", shk), far = div("tz-far", cam), mid = div("tz-mid", cam), near = div("tz-near", cam), over = div("", s, FILL + "pointer-events:none");
+        if (o.bg) { const im = document.createElement("img"); im.className = "tz-bg"; im.alt = ""; im.src = "assets/bg/" + o.bg + (o.soft === false ? ".svg" : ".soft.png"); far.appendChild(im); }
+        const R = { s, shk, cam, far, mid, near, over, k };
+        R.svg = (layer, html, vb) => {
+          const v = document.createElementNS(NSV, "svg");
+          v.setAttribute("viewBox", vb || "0 0 1920 1080");
+          v.setAttribute("style", FILL + "overflow:visible");
+          v.innerHTML = html || "";
+          (typeof layer === "string" ? R[layer] : layer).appendChild(v);
+          return v;
+        };
+        R.actor = (spec, a) => {
+          a = Object.assign({ x: 700, b: null, cls: "", layer: "mid", t0: 0, t1: 1, seed: k * 7 + 3, pose: "rest" }, a);
+          const el = div("tz-actor" + (a.cls ? " " + a.cls : ""), typeof a.layer === "string" ? R[a.layer] : a.layer, "left:" + a.x + "px;" + (a.b != null ? "bottom:" + a.b + "px;" : ""));
+          if (a.close) closeup(el, a.close);
+          const base = typeof spec === "string" ? TOON.CAST[spec] : spec;
+          const rig = TOON.actor(el, Object.assign({}, base, a.flip ? { flip: true } : {}, a.back ? { back: true } : {}));
+          if (a.t1 > a.t0) { TOON.idle(tl, rig, a.t0, a.t1, a.seed); TOON.pose(tl, rig, a.t0, a.pose, 0.01); }
+          return rig;
+        };
+        R.text = (txt, css, layer) => { const d = div("", typeof layer === "string" ? R[layer || "over"] : layer || over, "position:absolute;" + (css || "")); d.innerHTML = txt; return d; };
+        return R;
+      };
+      const g = (id, html, tr) => `<g id="${P}${id}"${tr ? ` transform="${tr}"` : ""}>${html}</g>`;
+      const $ = (id) => document.getElementById(P + id);
+    return { TOPWALK, topStride, eyeOpen, QM, NOPE, CLOCK, COINS, PHONE, GOV, beats, shot, g, $, div, TOPSEAT, TOPTABLE, TILES, chapter, HANDS, povArm, LIDS, lids, lidsInit, blink, closeup, sp, coat, CLOUD, TREE, GLOW, LAND, BAMBOO, PADDY, LANTERN, ARECA, JAR, HOUSE, COURT, BUF, HAT, hat, THINK, FACE, BANG, STAR, SPARK, PILL, CHECK, CUP, BOWL, DRAGON, pop, stamp, eyesDown, walk, hop, shake, sip, STEAM, steam };
   };
 })();

@@ -12,7 +12,10 @@ ENHANCE=auto           # auto | yes | no — AI mở rộng dải tần (Resembl
                        # auto = yes khi giọng gốc < 44.1 kHz (TTS 24 kHz), no khi đã là bản thu tốt
 TEMPO=1.0              # tốc độ giọng (1.1 = nhanh 10%), áp dụng TRƯỚC khi căn từ
 END_HOLD=1.5           # giây giữ end card sau từ cuối
-WARMTH=1               # 0 | 1 | 2 — độ "ấm" của master (1 = bản đã duyệt)
+MASTER=light           # light = loudness only (default, keeps the original read) | full = master.py EQ chain
+WARMTH=0               # 0 transparent corrective master (bounded 4 dB) | 1 | 2 darker (muffled on TTS, listen-check first)
+DEFRY=1                # vocal-fry repair (Praat PSOLA in fry regions + deep tails softened); 0 off
+DECLICK=1              # targeted vocoder-click repair above 3 kHz (Gemini TTS ~80 clicks/min); 0 off
 LOUDNESS=-14           # LUFS
 SFX_DB=3               # cả bus SFX, dB (+3 = mức đã duyệt; -3 nhỏ hơn)
 MUSIC=                 # nhạc nền (vd audio/music.mp3); trống = không nhạc

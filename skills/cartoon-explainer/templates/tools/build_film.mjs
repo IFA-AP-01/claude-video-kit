@@ -2,6 +2,11 @@
 // data/words.json -> film/assets/data/words.js, scene hosts in film/index.html, missing scene files,
 // film/assets/audio/mix.wav (final_mix.wav when present, else voice_master.wav).
 //   node tools/build_film.mjs [--lead 0.12] [--brand NAME] [--format landscape|vertical] [--captions 0|1]
+//                             [--outro SECONDS] [--chapters "id|Title|mood,..."]
+// --outro adds a closing `outro` scene (tools/outro-template.html) over the last SECONDS after the last word.
+// --chapters: an entry with a Title starts a chapter (its scene opens right after the previous scene's last
+// word, so the longer chapter pause belongs to the chapter card); mood picks the grade tint from that scene on.
+// Chapters go to TOON_DATA.chapters and out/youtube_chapters.txt.
 // --format sets the stage size everywhere (index.html root/viewport/body, scene hosts, data-format);
 // --captions 1 adds a full-length karaoke caption layer (compositions/captions.html).
 import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
@@ -18,6 +23,8 @@ const BRAND = opt("--brand", null);
 const FORMAT = opt("--format", "landscape");
 const [SW, SH] = FORMAT === "vertical" ? [1080, 1920] : [1920, 1080];
 const CAPTIONS = opt("--captions", "0") === "1";
+const OUTRO = +opt("--outro", 0);
+const CHAPTERS = opt("--chapters", "").split(",").map((c) => c.split("|").map((x) => x.trim())).filter((c) => c[0]).map(([id, title = "", mood = ""]) => ({ id, title, mood }));
 
 const wordsPath = join(ROOT, "data/words.json");
 if (!existsSync(wordsPath)) throw new Error("no data/words.json: run ./make.sh align");
@@ -36,19 +43,28 @@ for (const l of W.lines) if (!order.includes(l.section)) order.push(l.section);
 const sections = order.map((id, k) => {
   const ls = W.lines.filter((l) => l.section === id);
   const prevEnd = k ? Math.max(...W.lines.filter((l) => l.section === order[k - 1]).map((l) => l.end)) : 0;
-  const start = k === 0 ? 0 : +Math.max(prevEnd, ls[0].start - LEAD).toFixed(3);
+  const isChapter = CHAPTERS.some((c) => c.id === id && c.title);
+  const start = k === 0 ? 0 : +(isChapter ? Math.min(prevEnd + 0.35, ls[0].start - LEAD) : Math.max(prevEnd, ls[0].start - LEAD)).toFixed(3);
   return { id, start };
 });
 if (W.intro > 0 && order[0] !== "intro") {
   sections[0].start = +Math.max(0, Math.min(...W.lines.filter((l) => l.section === order[0]).map((l) => l.start)) - LEAD).toFixed(3);
   sections.unshift({ id: "intro", start: 0 });
 }
+if (OUTRO > 0 && order.at(-1) !== "outro") {
+  const lastEnd = Math.max(...W.lines.map((l) => l.end));
+  sections.push({ id: "outro", start: +Math.max(lastEnd + 0.5, duration - OUTRO).toFixed(3) });
+}
 sections.forEach((s, k) => (s.end = k + 1 < sections.length ? sections[k + 1].start : duration));
 
 const r3 = (x) => +(+x).toFixed(3);
+const chapters = CHAPTERS.filter((c) => sections.some((s) => s.id === c.id)).map((c, k, a) => ({
+  ...c, n: a.slice(0, k + 1).filter((x) => x.title).length, start: sections.find((s) => s.id === c.id).start,
+}));
 const data = {
   duration,
   sections,
+  chapters,
   lines: W.lines.map((l) => ({
     i: l.i, section: l.section, text: l.text, start: r3(l.start), end: r3(l.end),
     words: l.words.map((w) => ({ w: w.w, start: r3(w.start), end: r3(w.end) })),
@@ -59,6 +75,7 @@ writeFileSync(join(FILM, "assets/data/words.js"), "window.TOON_DATA = " + JSON.s
 
 const tpl = readFileSync(join(ROOT, "tools/scene-template.html"), "utf8");
 const introTpl = join(ROOT, "tools/intro-template.html");
+const outroTpl = join(ROOT, "tools/outro-template.html");
 const created = [];
 const capTpl = join(ROOT, "tools/captions-template.html");
 const capFile = join(FILM, "compositions/captions.html");
@@ -67,7 +84,7 @@ for (const s of sections) {
   const f = join(FILM, "compositions", s.id + ".html");
   if (!existsSync(f)) {
     mkdirSync(dirname(f), { recursive: true });
-    writeFileSync(f, (s.id === "intro" && existsSync(introTpl) ? readFileSync(introTpl, "utf8") : tpl.replaceAll("__ID__", s.id)).replace(/data-width="1920" data-height="1080"/, `data-width="${SW}" data-height="${SH}"`));
+    writeFileSync(f, (s.id === "intro" && existsSync(introTpl) ? readFileSync(introTpl, "utf8") : s.id === "outro" && existsSync(outroTpl) ? readFileSync(outroTpl, "utf8") : tpl.replaceAll("__ID__", s.id)).replace(/data-width="1920" data-height="1080"/, `data-width="${SW}" data-height="${SH}"`));
     created.push(s.id);
   }
 }
@@ -88,5 +105,12 @@ html = html.replace(/(<div id="root"[^>]*?)data-width="\d+" data-height="\d+"/, 
 if (BRAND) html = html.replace(/(<div\b[^>]*\bid="logo-[lr]"[^>]*>)[^<]*(<\/div>)/g, `$1${BRAND}$2`);
 writeFileSync(indexPath, html);
 
+if (chapters.some((c) => c.title)) {
+  const ts = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  const rows = [`0:00 ${sections[0].id === "intro" ? "Intro" : "Start"}`, ...chapters.filter((c) => c.title).map((c) => `${ts(c.start)} ${c.title}`)];
+  if (sections.at(-1).id === "outro") rows.push(`${ts(sections.at(-1).start)} Outro`);
+  mkdirSync(join(ROOT, "out"), { recursive: true });
+  writeFileSync(join(ROOT, "out/youtube_chapters.txt"), rows.join("\n") + "\n");
+}
 console.log(`film: ${FORMAT} ${SW}×${SH}${CAPTIONS ? " + captions" : ""}, ${duration} s, ${sections.length} scenes, audio ${mixSrc.replace(ROOT + "/", "")}`);
 for (const s of sections) console.log(`  ${s.id.padEnd(16)} ${s.start.toFixed(2).padStart(7)} – ${s.end.toFixed(2).padStart(7)}${created.includes(s.id) ? "   (new: placeholder scene)" : ""}`);

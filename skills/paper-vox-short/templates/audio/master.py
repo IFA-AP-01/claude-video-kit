@@ -10,6 +10,11 @@
 4. de-ess: per frame, if 5-10 kHz is too loud vs 300-3000 Hz, duck that band\n   + presence tamer: same for 2-5 kHz spikes (fricatives) — the main source of harshness here
 5. ffmpeg: gentle compressor + 2-pass loudnorm, 48 kHz / 24-bit, 0.25 s head pad
 6. post-dynamics tonal EQ pass (compression brightens the long-term spectrum), static gain + TP limiter
+
+--warmth 0 is the transparent, corrective master (default): neutral LTASS target, every static
+cut bounded to 4 dB, one EQ pass, light de-harsh, 1.5:1 compressor, no post-dynamics EQ.
+Warmth 1-2 darken toward a fixed broadcast curve; on a TTS voice they cut 5-12 kHz by ~15 dB
+and sound muffled, so use them only after a matched-loudness listen-check.
 """
 
 import argparse
@@ -30,8 +35,9 @@ SR = 48000
 TARGET = {
     -1: [(1000, 0), (2000, -5), (3150, -9), (4000, -11), (5000, -12.5), (6300, -14.5), (8000, -17),
          (10000, -20), (12500, -25), (16000, -33), (24000, -55)],
-    0: [(1000, 0), (2000, -6), (2800, -10), (3550, -13.5), (4500, -17), (5600, -20), (7100, -23),
-        (9000, -27), (12000, -33), (16000, -42), (24000, -60)],
+    # neutral speech LTASS (Byrne 1994 slope): corrective only, the voice keeps its own air
+    0: [(1000, 0), (2000, -4), (3150, -6.5), (4000, -8), (5000, -9.5), (6300, -11), (8000, -13),
+        (10000, -15), (12500, -18), (16000, -24), (24000, -40)],
     1: [(1000, 0), (2000, -6.5), (2800, -11), (3550, -15), (4500, -19), (5600, -22), (7100, -25),
         (9000, -29), (12000, -36), (16000, -46), (24000, -65)],
     2: [(1000, 0), (2000, -7), (2800, -12), (3550, -16.5), (4500, -21), (5600, -24), (7100, -27),
@@ -51,20 +57,25 @@ def ltas(y, n_fft=4096):
     return f, 10 * np.log10(S.mean(1) + 1e-20)
 
 
+MAX_CUT = 12.0  # dB bound on any static EQ cut; 4 for warmth 0 (corrective, never dulls the voice)
+LOW_TRIM = 0.0  # extra dB on LOW_TARGET 100-400 Hz (negative = less chest/throat boom, a lighter voice)
+
+
 def tonal_eq(y, warmth):
     f, d = ltas(y)
     d = gaussian_filter1d(d, 6)  # smooth (~70 Hz at 4096) — broad strokes only
     ref = d[(f > 800) & (f < 1200)].mean()
     tf, tg = zip(*TARGET[warmth])
     target = np.interp(f, tf, tg)
-    corr = np.clip(target - (d - ref), -12, 0)  # cut only: never brighten
+    corr = np.clip(target - (d - ref), -MAX_CUT, 0)  # cut only: never brighten
     lf, lg = zip(*LOW_TARGET)
     _, raw = ltas(y)
     lg2 = np.log2(np.maximum(f, 20))
     grid = np.linspace(lg2[1], lg2[-1], 2048)
     third = uniform_filter1d(10 * np.log10(np.interp(grid, lg2, 10 ** (raw / 10))), 2048 // 33)
     d_low = np.interp(lg2, grid, third)
-    low = np.clip(np.interp(f, lf, lg) - (d_low - ref), -9, 0)
+    lt = np.interp(f, lf, lg) + LOW_TRIM * np.interp(f, [60, 100, 400, 700], [0.5, 1, 1, 0])
+    low = np.clip(lt - (d_low - ref), -max(MAX_CUT, 10.0), 0)  # boom below 1 kHz: match approved voices, up to 10 dB
     corr = np.where(f >= 1000, corr, np.where(f >= 60, low, 0))
     # smooth the correction over ~1/3 octave so it is a gentle curve, not a comb
     logf = np.log2(np.maximum(f, 20))
@@ -147,9 +158,13 @@ def _loudnorm_measure(src, chain, ln):
     return json.loads(txt[txt.rindex("{"): txt.rindex("}") + 1])
 
 
-def ffmpeg_finish(src, dst, loudness):
-    pre = ("adelay=250:all=1,apad=pad_dur=0.5,highpass=f=80:poles=2,lowshelf=f=170:g=-2.5:t=q:w=0.7,"
-           "acompressor=threshold=-22dB:ratio=2:attack=15:release=150:knee=6:makeup=1.5")
+def ffmpeg_finish(src, dst, loudness, gentle=False):
+    if gentle:
+        pre = ("adelay=250:all=1,apad=pad_dur=0.5,highpass=f=70:poles=2,"
+               "acompressor=threshold=-24dB:ratio=1.5:attack=20:release=200:knee=8:makeup=1")
+    else:
+        pre = ("adelay=250:all=1,apad=pad_dur=0.5,highpass=f=80:poles=2,lowshelf=f=170:g=-2.5:t=q:w=0.7,"
+               "acompressor=threshold=-22dB:ratio=2:attack=15:release=150:knee=6:makeup=1.5")
     ln = f"loudnorm=I={loudness}:TP=-1.0:LRA=7"
     m = _loudnorm_measure(src, pre, ln)
     gain = loudness + 0.3 - float(m["input_i"])
@@ -167,32 +182,39 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src")
     ap.add_argument("dst")
-    ap.add_argument("--warmth", type=int, default=1, choices=[-1, 0, 1, 2])
+    ap.add_argument("--warmth", type=int, default=0, choices=[-1, 0, 1, 2])
+    ap.add_argument("--low-trim", type=float, default=0.0, help="dB on 100-400 Hz target; -3 lightens a deep, throaty voice")
     ap.add_argument("--loudness", type=float, default=-14.0)
     ap.add_argument("--pres-thresh", type=float, default=None, help="2-5 kHz spike threshold vs voice body (dB); default voiced median + 12")
     a = ap.parse_args()
 
     y, _ = librosa.load(a.src, sr=SR, mono=True, res_type="soxr_vhq")
+    global LOW_TRIM, MAX_CUT
+    LOW_TRIM = a.low_trim
+    gentle = a.warmth == 0
+    MAX_CUT = 4.0 if gentle else 12.0
     y, f, corr = tonal_eq(y, a.warmth)
-    y, _, corr2 = tonal_eq(y, a.warmth)  # second pass: the low cut lowers the 1 kHz reference, so re-measure
-    corr = corr + corr2
+    if not gentle:
+        y, _, corr2 = tonal_eq(y, a.warmth)  # second pass: the low cut lowers the 1 kHz reference, so re-measure
+        corr = corr + corr2
     pts = [100, 200, 400, 2000, 3000, 4500, 6000, 8000, 12000]
     print("  static EQ cut:", ", ".join(f"{str(p // 1000) + 'k' if p >= 1000 else p} {np.interp(p, f, corr):+.1f}dB" for p in pts))
-    y, st = deharsh(y, pres_thresh=a.pres_thresh)
+    y, st = deharsh(y, pres_thresh=a.pres_thresh, **(dict(depth=0.2, max_cut=2.0, ess_max=3.0, pres_max=3.0) if gentle else {}))
     print(f"  de-harsh avg cut 2-10k {st['res_avg_cut']:.1f} dB, de-ess {st['ess_frames'] * 100:.0f}% frames, "
           f"presence tamer {st['pres_frames'] * 100:.0f}% frames")
     with tempfile.TemporaryDirectory() as td:
         tmp = str(Path(td) / "pre.wav")
         sf.write(tmp, y.astype(np.float32), SR, subtype="FLOAT")
         mid = str(Path(td) / "mid.wav")
-        ffmpeg_finish(tmp, mid, a.loudness)
+        ffmpeg_finish(tmp, mid, a.loudness, gentle)
         # compression lifts quiet consonants against vowels (2-9 kHz rose ~5 dB): match the target after it
         z, _ = sf.read(mid)
         corr3 = 0
-        for _ in range(3):  # each pass moves the 1 kHz reference a little, so converge
+        for _ in range(0 if gentle else 3):  # each pass moves the 1 kHz reference a little, so converge
             z, _, c = tonal_eq(z, a.warmth)
             corr3 = corr3 + c
-        print("  post-dynamics EQ cut:", ", ".join(f"{str(p // 1000) + 'k' if p >= 1000 else p} {np.interp(p, f, corr3):+.1f}dB" for p in pts))
+        if not gentle:
+            print("  post-dynamics EQ cut:", ", ".join(f"{str(p // 1000) + 'k' if p >= 1000 else p} {np.interp(p, f, corr3):+.1f}dB" for p in pts))
         post = str(Path(td) / "post.wav")
         sf.write(post, z.astype(np.float32), SR, subtype="FLOAT")
         m = _loudnorm_measure(post, "anull", f"loudnorm=I={a.loudness}:TP=-1.0:LRA=7")

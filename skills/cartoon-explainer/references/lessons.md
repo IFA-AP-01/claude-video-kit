@@ -274,3 +274,92 @@ TEMPO 0.95 (~199 wpm) still read as rushed. Template default is now TEMPO=0.88 (
 - Defect: karaoke captions at 82 px, top 1250 px sat over the mid-frame action (hands, faces, props).
 - Fix (toon.css `.tz-caps`/`.tz-cap`): 66 px, top 1430 px, height 200 px, 11 px stroke. Keeps them just above the
   Shorts bottom UI zone (last 380 px) and clear of the action band.
+
+## Film-wide grade layer (2026-11-01, "Nobody Ever Asks Married People Why")
+- Defect: every frame washed with a pink/peach haze. Two causes. (1) `fromTo` defaults to
+  `immediateRender: true`, so the fade-OUT tween of every chapter tint applied its `from` opacity at build
+  time and all five tints stacked at once. (2) `mix-blend-mode` (soft-light, saturation) on the tint layers
+  blends only within the scene hosts' stacking context, so it fell back to a flat overlay.
+- Fix: `tl.set(".tz-tint", {opacity: 0}, 0)` then `fromTo(..., {immediateRender: false})` for every tint
+  tween; normal-blend tints at low opacity (warm 0.06, others 0.10–0.12), no desat layer, keep the vignette.
+  Rule: any overlay driven by several `fromTo` tweens on one target needs `immediateRender: false`.
+
+## Vocal fry treated with EQ/pitch made the voice fatiguing (2026-11-01, "Nobody Ever Asks Married People Why")
+- Defect: the English TTS read had vocal fry (creaky, burp-like pulses at 30–60 Hz at phrase ends). It was
+  "fixed" with PITCH +1.2 st, LOW_TRIM −4 and WARMTH −1. The fry stayed, and the voice turned bright and thin
+  (2–5 kHz presence p90 +5.3 dB vs +2.5, body −4 dB), which gave the listener a headache.
+- Fix: `audio/defry.py`, run by `make.sh voice` before `master.py` (`DEFRY` in BRIEF.md). Praat detects fry:
+  low-floor cc pitch < 0.62× the modal median, or modal-unvoiced with low pulses, or jitter > 4 %. Each span
+  ≥ 25 ms is re-voiced by pulse-train PSOLA at a contour joined to the neighbouring modal F0, sub-F0 rumble is
+  high-passed and 12 ms crossfades are applied. Praat's own overlap-add can't do it, because it treats pulses
+  slower than 50 Hz as unvoiced and copies fry unchanged.
+  On this voice, fry spans ≥ 25 ms dropped 87 % (spans ≥ 40 ms 96 %), repaired spans hit the target F0
+  (43 → 94 Hz), 40–80 Hz rumble fell 3.6 dB in those spans, no added brightness, 0 samples changed outside them.
+- Rule: froggy/throaty = check for fry first, then repair it; keep PITCH/LOW_TRIM/WARMTH for taste only.
+
+## Voice master muffled the voice; defry resynthesised fricatives into hiss (married-why, 2026-11-01)
+- Defect: per-stage listening showed master.py at WARMTH 1 much worse than the raw voice (5-12 kHz cut ~15 dB,
+  three post-dynamics EQ passes stacked); defry was inaudible as a benefit and raised sibilance p95 +6 -> +19 dB
+  because "s"/breath frames (modal tracker unvoiced, low tracker finds "pulses") were flagged as fry and PSOLA'd.
+- Fix: WARMTH 0 = transparent corrective master (neutral LTASS target, every cut bounded to 4 dB, one pass,
+  light de-harsh, 1.5:1 compressor, no post-dynamics EQ), now the default. defry.py gates fry frames to voiced
+  frames (energy < 1 kHz more than 6 dB over 3 kHz+). Sibilance unchanged by defry now.
+- Process: every voice stage gets a 15 s matched-loudness clip (out/ab/steps*) and must beat the original by ear
+  before it touches the film. In-voice grain from a TTS vocoder is not background noise: denoisers/gates do
+  nothing for it; use the Resemble Enhance step (paper-vox-short ENHANCE).
+
+## Premium TTS: the original read beat every processing chain (married-why, 2026-11-01)
+- Defect: nine versions (defry, corrective/dark master, low cut, Resemble Enhance at two strengths, soft top)
+  all sounded worse than the raw voice to the user; only declick + loudness kept the read.
+- Fix: `MASTER=light` (default) = `audio/light_master.py`: soxr 48 kHz, ffmpeg adeclick, static gain, TP limiter,
+  no EQ/compressor/de-ess. `DEFRY=0` and `PITCH=0` by default (rubberband adds artifacts on TTS); tempo uses atempo.
+  `MASTER=full` keeps the old master.py chain for raw recordings that need it.
+- Process: start from the original; add one stage at a time only if the user prefers it by ear on a 15 s clip.
+
+## Gemini TTS crackle and vocal fry: targeted repair, not filters (married-why, 2026-11-01)
+- Defect: the user heard crackle ("lách tách") and a heavy, froggy throat (vocal fry, worst on phrase ends like
+  "the world") in a Gemini TTS voice. Twelve chains (EQ masters, low cut, ffmpeg adeclick, Resemble Enhance,
+  dynamic EQ, de-ess, room tone) each sounded worse than the original.
+- Audit (do this first): Gemini outputs 24 kHz natively (not a bad export). Spectrogram + event counts found
+  ~84 broadband vocoder clicks per minute at word edges, short static bursts after words (a known Gemini bug),
+  and F0 dropping under 80 Hz on ~9 % of voiced frames; no background noise, no drift, normal brightness.
+- A hand-written pulse-train PSOLA over many fry regions smeared the formants ("lụp bụp, vỡ"). Pop and wobble
+  metrics missed it; the spectrogram showed it. Check a spectrogram before sending any resynthesised clip.
+- Praat's overlap-add copies pulse gaps over 20 ms unchanged, so deep fry survived until the pulses were refilled
+  at 12.5 ms or less. Creak under 60 Hz cannot be re-pitched cleanly; turn it down 14 dB instead.
+- Fix: `defry.py` (wide reach, Praat repair, deep tails softened) → `declick.py` (high band only, 8 ms per click)
+  → `light_master.py` (loudness only). The user approved this as clip 14 (fry share 14.8 % → 3.3 %).
+
+- **SVG group lands far off-centre after a `fromTo` with `svgOrigin` + `y`/`scale`/`rotation` (married-why Korea map).**
+  GSAP's smoothOrigin compensates for the from-state transform and leaves a permanent `xOffset/yOffset`
+  (here +363, −555 px); nesting groups alone does not fix it. Fix: pass `smoothOrigin: false` in both the from
+  and to vars. Clean pattern: a static `<g transform="translate(px py)">` pivot wrapper, then the tweened group
+  with `svgOrigin: "0 0", smoothOrigin: false`, then `<g transform="translate(-px -py)">`. Use one tweened group
+  per transform role (drop, squash, slide, wobble).
+
+## Walks faced the camera; staging ignored the action (married-why, 2026-11-02)
+- Defect: 13 walking shots slid actors sideways while they faced the lens; a wheelchair was pushed from the front,
+  sacks floated over heads, a box sat above the chest.
+- Fix: depth walk (`references/rig.md`): back-view actor in a mover div receding to a vanishing point, front view
+  when approaching, opacity swap for a turn; loads on shoulders/back; pushers behind. Check one still per walk.
+
+## Comic SFX broke touching scenes; canned laughs read as cringe (married-why, 2026-11-02)
+- Defect: pops, slaps and stamps on emotional lines played like a sitcom; laugh cues sounded cringe.
+- Fix: `mix.py` tone policy with `SFX_LIGHT=` (light scenes listed, all others tender): tender scenes drop comic
+  kinds (28 cues) and soften pop/stamp to paper (136 cues); light scenes keep them one step softer. Laugh cues and
+  beds removed from every scene; the skill no longer offers them.
+
+## Silence before the first word (married-why, 2026-11-02)
+- Defect: the opening sat at −54 dB until the voice began; the first track also had ~1 s of leading silence.
+- Fix: the first music phase covers the intro and starts at `"start": 1.15` (silencedetect); second 0 now −36 dB.
+
+## Loudness on request (married-why, 2026-11-02)
+- The user asked for the whole film a bit louder for easier listening: `LOUDNESS=-17` (was −20), still gain + TP
+  limiter only; `mix.py --loudness` now takes the BRIEF value instead of a fixed target.
+
+## check: overlaps and short holds from texture text (married-why, 2026-11-02)
+- Defect: 20 findings; content_overlap on numbers of tiles receding in depth, line_unread on year/value tickers,
+  sub-28 px on panel labels, short stat pills that popped on the key word, a red seal on a mauve wall (1.18:1).
+- Fix: `data-layout-ignore` on texture/ticker text, labels sized for their scaled panel (38 → 44 px), pills pop
+  0.5–0.8 s earlier (on the lead-in word), seal darkened. The letter-split title card is a false positive
+  (`check` counts each letter as a word).

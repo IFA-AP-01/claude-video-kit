@@ -74,6 +74,16 @@ round, else wide; final `m/p/b` → closed; digits → 1–3 open/wide/round. Mo
 | `cuts(tl, shots, times)` | hard cuts by opacity |
 | `cue(t, kind, x, gain, dur)` | extra SFX: stamp, slap, paper, tape, whoosh, tick, type, cross, fan, hiss, pop |
 
+## Depth walk (no profile rig)
+The rig has front and back views only, so a walk is staged in depth, never as a side-on slide facing the lens.
+- Away: `shot.actor(spec, {back: true, layer: mover})`; tween the mover `{y, scale}` from near (y 60, s 1.1) to
+  far (y −230, s 0.4) with `transformOrigin` at the vanishing point; `K.walk` over the same span.
+- Toward: front view, the reverse tween (s 0.55 → 1.1, y −170 → 60).
+- Turn mid-shot: a front and a back actor at the same x, swapped with opacity on the turn word.
+- Pair it with depth props (tiles, seedlings, posts) placed by a perspective function `P(i) → [y, scale]`; put
+  `data-layout-ignore` on any text on far props. Loads go on the back (sacks at shoulder height, a bag drawn over
+  the back actor); pushers walk behind.
+
 ## Camera helpers (any format)
 - `TOON.move(tl, shot, keys)`: multi-plane camera. Planes are elements with `data-z` inside the shot; at each key
   `{t, x, y, s, ease}` a plane gets `x:-x*z, y:-y*z, scale:1+(s-1)*z`, so far planes (small z) barely move.

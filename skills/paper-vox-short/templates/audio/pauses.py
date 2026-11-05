@@ -8,7 +8,8 @@ widened to the target with the gap's own room tone (quietest 0.24 s of the gap, 
 equal-power crossfades), spliced in the middle of the gap. Word, line, section and extra times in
 words.json and the stinger plan's t are shifted to match. Targets are minimums, so a second run
 adds nothing. The inserted pauses are listed in words.json "pauses" ([at, added] in the old time base
-of each run).
+of each run). --chapter/--chapters give chapter-start sections (CHAPTERS in BRIEF.md) a longer
+pause for the chapter card.
 """
 import argparse
 import json
@@ -67,6 +68,8 @@ def main():
     ap.add_argument("--section", type=float, default=2.0)
     ap.add_argument("--para", type=float, default=1.6)
     ap.add_argument("--sentence", type=float, default=0.7)
+    ap.add_argument("--chapter", type=float, default=0.0, help="min. pause before a chapter-start section")
+    ap.add_argument("--chapters", default="", help="CHAPTERS from BRIEF.md: id|Title|mood,...")
     a = ap.parse_args()
 
     wav = ROOT / "audio/out/voice_master.wav"
@@ -80,11 +83,14 @@ def main():
     info = sf.info(wav)
 
     L = W["lines"]
+    chap = {c.split("|")[0] for c in a.chapters.split(",") if c.count("|") >= 1 and c.split("|")[1].strip()}
     pends = para_ends(script, L)
     ins = []
     for p, q in zip(L, L[1:]):
         gap = q["start"] - p["end"]
-        if p["section"] != q["section"]:
+        if p["section"] != q["section"] and q["section"] in chap and a.chapter > a.section:
+            want, kind = a.chapter, "chapter"
+        elif p["section"] != q["section"]:
             want, kind = a.section, "section"
         elif p["i"] in pends:
             want, kind = a.para, "paragraph"
@@ -134,7 +140,8 @@ def main():
         sp = ROOT / m.group(1)
         P = json.loads(sp.read_text())
         for c in P.get("cues", []):
-            c["t"] = shift(c["t"])
+            if "t" in c:
+                c["t"] = shift(c["t"])
         sp.write_text(json.dumps(P, ensure_ascii=False, indent=2) + "\n")
 
     sf.write(wav, out, sr, subtype=info.subtype)

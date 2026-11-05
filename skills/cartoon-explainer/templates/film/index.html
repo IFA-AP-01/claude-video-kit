@@ -21,12 +21,35 @@
       <div id="ground"></div>
       <!-- scenes:begin -->
       <!-- scenes:end -->
+      <div id="grade" class="tz-grade">
+        <div class="tz-desat"></div>
+        <div id="tint-warm" class="tz-tint" style="background: #ffb26b"></div>
+        <div id="tint-cool" class="tz-tint" style="background: #7c9fc6"></div>
+        <div id="tint-amber" class="tz-tint" style="background: #f2a35e"></div>
+        <div id="tint-storm" class="tz-tint" style="background: #8a9f97"></div>
+        <div id="tint-dusk" class="tz-tint" style="background: #9b80c2"></div>
+        <div class="tz-vig"></div>
+      </div>
       <img id="grain" class="clip tz-grain" src="assets/bg/grain.soft.png" alt="" data-start="0" data-duration="10" data-track-index="7" data-track-kind="graphics" />
       <div id="logo-r" class="clip tz-logo" data-start="0" data-duration="10" data-track-index="9" data-track-kind="graphics">BRAND</div>
       <audio id="mix" class="clip" data-start="0" data-duration="10" data-track-index="0" data-volume="1" src="assets/audio/mix.wav"></audio>
     </div>
     <script>
-      window.__timelines["main"] = gsap.timeline({ paused: true });
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const D = window.TOON_DATA || { sections: [] }, XF = 1.6, AMT = { warm: 0.06, cool: 0.12, amber: 0.1, storm: 0.12, dusk: 0.12 }, TINT = (m) => AMT[m] ?? 0.1;
+        let cur = null;
+        tl.set(".tz-tint", { opacity: 0 }, 0);
+        for (const s of D.sections) {
+          const c = (D.chapters || []).find((c) => c.id === s.id && c.mood);
+          if (!c || c.mood === cur) continue;
+          const t = Math.max(0, s.start - (cur ? XF / 2 : 0));
+          if (cur) tl.fromTo("#tint-" + cur, { opacity: TINT(cur) }, { opacity: 0, duration: XF, ease: "sine.inOut", immediateRender: false }, t);
+          tl.fromTo("#tint-" + c.mood, { opacity: 0 }, { opacity: TINT(c.mood), duration: cur ? XF : 0.01, ease: "sine.inOut", immediateRender: false }, t);
+          cur = c.mood;
+        }
+        window.__timelines["main"] = tl;
+      })();
     </script>
   </body>
 </html>

@@ -90,3 +90,12 @@ body[data-format="landscape"] .tz-caps { left: 260px; right: 260px; top: 850px; 
   text-shadow: 0 5px 0 rgba(20, 24, 40, 0.6), 0 0 22px rgba(20, 24, 40, 0.45); opacity: 0; }
 .tz-cap .w { display: inline-block; margin: 0 0.12em; }
 .tz-cap .w.hot { color: #ffd84a; }
+.tz-grade { position: absolute; inset: 0; pointer-events: none; }
+.tz-grade > div { position: absolute; inset: 0; z-index: 39; }
+.tz-tint { opacity: 0; }
+.tz-desat { display: none; }
+.tz-vig { background: radial-gradient(ellipse 75% 70% at 50% 46%, rgba(20, 14, 30, 0) 55%, rgba(20, 14, 30, 0.4) 100%); }
+.tz-chapter { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; z-index: 30; }
+.tz-chapter .k { font: 800 38px/1 var(--tz-font); letter-spacing: 0.32em; text-transform: uppercase; color: rgba(255, 244, 226, 0.82); }
+.tz-chapter .t { font: 900 112px/1.04 var(--tz-font); color: #fff4e2; text-align: center; max-width: 1500px; text-shadow: 0 6px 30px rgba(20, 14, 30, 0.45); }
+.tz-chapter .rule { width: 260px; height: 6px; border-radius: 3px; background: #f2b96b; }

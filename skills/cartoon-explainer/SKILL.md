@@ -38,6 +38,14 @@ We copy the grammar, never their logo, characters or channel identity.
 3. **Run**: `./make.sh setup` → `voice` → `align`. `align` ends with `film`, which writes
    `film/assets/data/words.js`, one host per section in `film/index.html` and a placeholder scene per
    section (random cast/background, lip-sync, cuts per sentence). Read `data/qa_report.md`.
+   `voice` = defry → declick → light master → tempo. `audio/defry.py` (`DEFRY=1`) repairs vocal fry, the creaky
+   rattle at English word/phrase ends heard as a froggy, heavy throat: Praat finds low/irregular pulses, Praat's
+   own overlap-add re-pitches only those spans (pulses refilled so deep fry is not copied), and creak under
+   60 Hz is turned down 14 dB. It prints the fry share before → after and writes `data/defry.json`,
+   `out/ab/defry_before.wav` / `defry_after.wav`. `audio/declick.py` (`DECLICK=1`) dips only the band above
+   3 kHz for 8 ms at each TTS vocoder click (Gemini TTS: ~80/min). Everything else stays bit-identical; the
+   light master only sets loudness. Never treat fry with PITCH, LOW_TRIM, EQ or gain, and never stack EQ,
+   enhancers or ffmpeg adeclick on a premium TTS read: each one sounded worse than the original.
    `align` also widens the voice's pauses (`PAUSE_SECTION/PARA/SENTENCE` in BRIEF.md, default 2.0/1.6/0.7 s)
    because a one-breath read overwhelms viewers. It rewrites the master in place: after `voice`, copy
    `audio/out/1.0x/voice_master.wav` to `out/` so the user can A/B the old read.
@@ -90,14 +98,21 @@ Read `references/example-scene.html` (a finished 4-shot scene) and `references/r
   div around `.tz-cam` (`TOON.shake` tweens x/y and would fight `parallax`/`whip`). Props held in a hand go
   inside `rig.foreR`/`foreL`; compute a held tip in stage px by rotating through `POSES[pose].armR/foreR`
   about the ORIGIN pivots (see `no_magic.html` `tip()` in the pilot).
-- Hold every line long enough to read: 0.5 s + 0.3 s per word (`check` flags `line_unread`).
+- Hold every line long enough to read: 0.5 s + 0.3 s per word (`check` flags `line_unread`). Rolling counters
+  (year or value tickers) put `data-layout-ignore` on every value but the last; so do texture glyphs (coin
+  `$`, numbers on far tiles).
+- Stage by the logic of the action, not always facing the camera (the user flagged walking actors that face
+  the lens): walking away = `back: true` actor in a mover div whose scale shrinks and y rises toward a vanishing
+  point; walking in = front view, scale grows; a carried load sits on the back/shoulder; a pusher stands behind
+  the wheelchair or pram. See `references/rig.md` "Depth walk".
 - Life ambience on every shot (the user wants each scene to feel lived-in): `TOON.amb(t, dur, file, db,
   { fi, fo, lp })` loops a bed from `audio/amb/<file>.mp3` over the shot span; `TOON.clip(t, file, db, x, dur)`
-  plays a one-shot (laugh, door, gust) on an action. Beds sit 20 dB under the voice in pauses, dip 6 dB more
+  plays a one-shot (door, gust, dog bark) on an action. Beds sit 20 dB under the voice in pauses, dip 6 dB more
   under speech and crossfade at cuts; `db` trims a layer, `lp` dulls it (distance, behind a wall).
-  Keep one-shots at ≤ −16 dB vs speech (`db` about −7 for a laugh, −19 for a wind gust) or they mask the line.
+  Keep one-shots at ≤ −16 dB vs speech (`db` about −7 for a door, −19 for a wind gust) or they mask the line.
+  No laugh one-shots or laugh beds: the user finds canned laughter cringe.
 - Synth beds when no recording fits: `TOON.cue(t, kind, x, gain, dur)` with kind `night`, `traffic`,
-  `crowd`, `family`, `office`, `room` (long beds, pass `dur`) or `laugh`, `cackle` (one-shots); `audio/sfx.py`
+  `crowd`, `family`, `office`, `room` (long beds, pass `dur`); `audio/sfx.py`
   draws them, `mix.py` LEVEL sets their dB. Keep gain low (0.06–0.25): they sit under the real beds.
 - Sourcing ambience: search real recordings first (Magnific library `magnific.com/audio/sound-effects/search?q=…`,
   then the web), shortlist name/source/licence/length/size, ask before downloading, save as
@@ -112,6 +127,12 @@ Read `references/example-scene.html` (a finished 4-shot scene) and `references/r
   (Kevin MacLeod, CC BY 4.0, direct download; catalogue `/music/royalty-free/pieces.json`), Magnific Tunes
   (free tracks `?premium=0`, 2 downloads/day on Free, the user downloads them with their account). Credits go
   in `audio/music/SOURCES.md`. Listen-check `out/ab/music_only.wav`.
+  Music plays from frame 0 (the user wants sound before the first word): the first phase starts at the
+  intro, and `"start"` skips a track's silent head (measure it with `ffmpeg -af silencedetect`).
+- SFX tone follows the scene (the user heard pops and slaps turn touching lines into comedy): list only the
+  ironic/light scenes in `SFX_LIGHT=` (BRIEF.md). Every other scene is tender: `mix.py --light` drops comic
+  kinds (slap, hop, slide, laugh, cackle), swaps pop/stamp for a soft paper rustle and trims tick/whoosh/clang;
+  light scenes keep comic kinds one step softer. Still pick quiet cue kinds when writing a tender scene.
 - Sound has three layers: SFX (cues from the scenes), situational stingers, and phase music. Stingers are short
   musical/comic cues on story beats (sad sting on a let-down line, record scratch on an ironic one, twinkle on a
   warm one, low hit on a fear line); keep them sparse (about one per scene at most). List them in

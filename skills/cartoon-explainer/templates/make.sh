@@ -3,7 +3,7 @@
 #
 #   ./make.sh setup            film: npm install + gsap copy + bake; audio/analysis: uv sync
 #   ./make.sh bake             soft (blurred) backgrounds, foreground props, grain → assets/bg/*.png
-#   ./make.sh voice            master → tempo + end hold → audio/out/voice_master.wav
+#   ./make.sh voice            [defry] → declick → master (light: loudness only) → tempo + end hold → audio/out/voice_master.wav
 #   ./make.sh align            script → lines → whisper → align → data/words.json → pauses → build film
 #   ./make.sh pauses           widen scene / paragraph / sentence pauses (room tone), shift word times
 #   ./make.sh film             rebuild film/ from data/words.json (scene hosts, timings, audio)
@@ -18,14 +18,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 ROOT=$PWD
 
-VOICE=voice.mp3 SCRIPT=script.txt LANGUAGE=vi TEMPO=1.0 END_HOLD=1.5 WARMTH=1 LOUDNESS=-14 SFX_DB=3
-MUSIC= MUSIC_DB=-20 STINGS= BRAND= WORKERS=2 FORMAT=landscape CAPTIONS=0
-PAUSE_SECTION=2.0 PAUSE_PARA=1.6 PAUSE_SENTENCE=0.7
+VOICE=voice.mp3 SCRIPT=script.txt LANGUAGE=vi TEMPO=1.0 PITCH=0 LOW_TRIM=0 END_HOLD=1.5 WARMTH=0 DEFRY=0 DEFRY_WORDS= DEFRY_TAIL_DB=-10 DECLICK=1 MASTER=light TONE= LOUDNESS=-14 SFX_DB=3
+MUSIC= MUSIC_DB=-20 STINGS= SFX_LIGHT= BRAND= WORKERS=2 FORMAT=landscape CAPTIONS=0
+PAUSE_SECTION=2.0 PAUSE_PARA=1.6 PAUSE_SENTENCE=0.7 PAUSE_CHAPTER=0 CHAPTERS= OUTRO=0
 if [[ -f BRIEF.md ]]; then
   while IFS='=' read -r k v; do
     v=${v%%#*}; v=${v%"${v##*[![:space:]]}"}; v=${v#"${v%%[![:space:]]*}"}
     [[ -n $v ]] && printf -v "$k" '%s' "$v"
-  done < <(grep -E '^(VOICE|SCRIPT|LANGUAGE|TEMPO|END_HOLD|WARMTH|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB|STINGS|BRAND|WORKERS|PAUSE_SECTION|PAUSE_PARA|PAUSE_SENTENCE|INTRO|FORMAT|CAPTIONS)=' BRIEF.md)
+  done < <(grep -E '^(VOICE|SCRIPT|LANGUAGE|TEMPO|PITCH|LOW_TRIM|END_HOLD|WARMTH|DEFRY|DEFRY_WORDS|DEFRY_TAIL_DB|DECLICK|MASTER|TONE|LOUDNESS|SFX_DB|MUSIC|MUSIC_DB|STINGS|SFX_LIGHT|BRAND|WORKERS|PAUSE_SECTION|PAUSE_PARA|PAUSE_SENTENCE|PAUSE_CHAPTER|CHAPTERS|OUTRO|INTRO|FORMAT|CAPTIONS)=' BRIEF.md)
 fi
 
 export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1
@@ -70,18 +70,38 @@ cmd_bake() {
 cmd_voice() {
   need_venv audio; busy
   [[ -f $VOICE ]] || die "voice file $VOICE not found"
-  mkdir -p audio/out/1.0x
+  mkdir -p audio/out/1.0x data out/ab
+  local src=$VOICE
+  if [[ ${DEFRY:-0} != 0 ]]; then
+    say "defry (vocal-fry repair, strength $DEFRY)"
+    "${NICE[@]}" audio/.venv/bin/python audio/defry.py "$src" audio/out/voice_defry.wav \
+      --strength "$DEFRY" --report data/defry.json --ab out/ab \
+      ${DEFRY_WORDS:+--words "$DEFRY_WORDS"} --tail-db "${DEFRY_TAIL_DB:--10}"
+    src=audio/out/voice_defry.wav
+  fi
+  if [[ ${DECLICK:-1} != 0 ]]; then
+    say "declick (vocoder clicks, above 3 kHz only)"
+    "${NICE[@]}" audio/.venv/bin/python audio/declick.py "$src" audio/out/voice_declick.wav
+    src=audio/out/voice_declick.wav
+  fi
+  if [[ ${MASTER:-light} == light ]]; then
+    say "master light (loudness $LOUDNESS LUFS, no EQ/dynamics)"
+    "${NICE[@]}" audio/.venv/bin/python audio/light_master.py "$src" audio/out/1.0x/voice_master.wav --loudness "$LOUDNESS" ${TONE:+--tone "$TONE"}
+  else
   say "master (warmth $WARMTH, $LOUDNESS LUFS)"
-  "${NICE[@]}" audio/.venv/bin/python audio/master.py "$VOICE" audio/out/1.0x/voice_master.wav \
-    --warmth "$WARMTH" --loudness "$LOUDNESS"
-  say "tempo $TEMPO + end hold $END_HOLD s"
-  audio/.venv/bin/python audio/tempo.py "$TEMPO" --hold "$END_HOLD"
+  "${NICE[@]}" audio/.venv/bin/python audio/master.py "$src" audio/out/1.0x/voice_master.wav \
+    --warmth "$WARMTH" --low-trim "$LOW_TRIM" --loudness "$LOUDNESS"
+  fi
+  local hold=$END_HOLD
+  [[ ${OUTRO:-0} != 0 ]] && hold=$(python3 -c "print($OUTRO + 0.6)")
+  say "tempo $TEMPO, pitch $PITCH st + end hold $hold s"
+  audio/.venv/bin/python audio/tempo.py "$TEMPO" --hold "$hold" --pitch "$PITCH"
   rm -f audio/out/final_mix.wav
 }
 
 cmd_film() {
   [[ -f data/words.json ]] || die "no data/words.json — run ./make.sh align"
-  node tools/build_film.mjs --format "$FORMAT" --captions "$CAPTIONS" ${BRAND:+--brand "$BRAND"}
+  node tools/build_film.mjs --format "$FORMAT" --captions "$CAPTIONS" --outro "${OUTRO:-0}" ${CHAPTERS:+--chapters "$CHAPTERS"} ${BRAND:+--brand "$BRAND"}
 }
 
 cmd_align() {
@@ -111,8 +131,9 @@ PY
 cmd_pauses() {
   need_venv audio
   [[ -f data/words.json ]] || die "no data/words.json — run ./make.sh align"
-  say "pauses (scene $PAUSE_SECTION s, paragraph $PAUSE_PARA s, sentence $PAUSE_SENTENCE s)"
-  audio/.venv/bin/python audio/pauses.py --section "$PAUSE_SECTION" --para "$PAUSE_PARA" --sentence "$PAUSE_SENTENCE"
+  say "pauses (chapter $PAUSE_CHAPTER s, scene $PAUSE_SECTION s, paragraph $PAUSE_PARA s, sentence $PAUSE_SENTENCE s)"
+  audio/.venv/bin/python audio/pauses.py --section "$PAUSE_SECTION" --para "$PAUSE_PARA" --sentence "$PAUSE_SENTENCE" \
+    --chapter "$PAUSE_CHAPTER" --chapters "$CHAPTERS"
   say "intro (${INTRO:-0} s before the first word)"
   audio/.venv/bin/python audio/intro.py --intro "${INTRO:-0}"
   say "film"
@@ -150,8 +171,9 @@ cmd_sfx() {
   local music=()
   [[ -n $MUSIC ]] && music=(--music "$MUSIC" --music-db "$MUSIC_DB")
   [[ -n $STINGS ]] && music+=(--stings "$STINGS")
+  music+=(--light "${SFX_LIGHT:-}")
   say "mix (SFX bus $SFX_DB dB${MUSIC:+, music $MUSIC at $MUSIC_DB dB}${STINGS:+, stings $STINGS})"
-  "${NICE[@]}" audio/.venv/bin/python audio/mix.py --sfx-db "$SFX_DB" ${music[@]+"${music[@]}"}
+  "${NICE[@]}" audio/.venv/bin/python audio/mix.py --sfx-db "$SFX_DB" --loudness "$LOUDNESS" ${music[@]+"${music[@]}"}
   cmd_film
   echo "preview now plays final_mix.wav (reload the page)"
 }
@@ -200,6 +222,6 @@ case ${1:-help} in
   sfx) cmd_sfx ;;
   test) cmd_test ;;
   final) cmd_final ;;
-  settings) echo "VOICE=$VOICE SCRIPT=$SCRIPT LANGUAGE=$LANGUAGE TEMPO=$TEMPO END_HOLD=$END_HOLD WARMTH=$WARMTH LOUDNESS=$LOUDNESS SFX_DB=$SFX_DB MUSIC=$MUSIC MUSIC_DB=$MUSIC_DB STINGS=$STINGS BRAND=$BRAND WORKERS=$WORKERS FORMAT=$FORMAT CAPTIONS=$CAPTIONS PAUSE_SECTION=$PAUSE_SECTION PAUSE_PARA=$PAUSE_PARA PAUSE_SENTENCE=$PAUSE_SENTENCE" ;;
+  settings) echo "VOICE=$VOICE SCRIPT=$SCRIPT LANGUAGE=$LANGUAGE TEMPO=$TEMPO PITCH=$PITCH LOW_TRIM=$LOW_TRIM END_HOLD=$END_HOLD WARMTH=$WARMTH DEFRY=$DEFRY DEFRY_WORDS=$DEFRY_WORDS DEFRY_TAIL_DB=$DEFRY_TAIL_DB DECLICK=$DECLICK MASTER=$MASTER TONE=$TONE LOUDNESS=$LOUDNESS SFX_DB=$SFX_DB MUSIC=$MUSIC MUSIC_DB=$MUSIC_DB STINGS=$STINGS SFX_LIGHT=$SFX_LIGHT CHAPTERS=$CHAPTERS PAUSE_CHAPTER=$PAUSE_CHAPTER OUTRO=$OUTRO BRAND=$BRAND WORKERS=$WORKERS FORMAT=$FORMAT CAPTIONS=$CAPTIONS PAUSE_SECTION=$PAUSE_SECTION PAUSE_PARA=$PAUSE_PARA PAUSE_SENTENCE=$PAUSE_SENTENCE" ;;
   *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

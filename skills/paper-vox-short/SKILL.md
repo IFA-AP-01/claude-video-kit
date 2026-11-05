@@ -50,7 +50,9 @@ templates/
   app/        engine three.js (paper, cutout, halftone, headline, stamp, tape, clipping, caption,
               parallax/Rig, beats/BeatScene, cues), timeline.ts tự sinh theo section,
               scenes/example.ts (cảnh chung đọc lời thoại), scripts/render.ts (--soft/still/cues)
-  audio/      enhance.py (Resemble Enhance, CPU, chunk) · master.py (EQ ấm, de-harsh, de-ess,
+  audio/      enhance.py (Resemble Enhance, CPU, chunk) · defry.py (vocal-fry repair: Praat detect +
+              Praat overlap-add, deep tails softened, DEFRY in BRIEF, A/B in out/ab/defry_*.wav) · declick.py (TTS vocoder
+              clicks, >3 kHz only, DECLICK) · light_master.py (loudness only, MASTER=light) · master.py (EQ ấm, de-harsh, de-ess,
               loudnorm, đệm 0.25 s) · tempo.py (atempo + end hold) · sfx.py (11 loại SFX giấy
               tổng hợp numpy) · mix.py (duck 5 dB dưới giọng, -14 LUFS, --sfx-db mặc định 3, --music/--music-db nhạc nền) ·
               splice.py + transcribe.py (ghép bản đọc lại vào voice chính)
