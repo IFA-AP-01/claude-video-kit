@@ -25,6 +25,7 @@ Read these before the first tool call of any visual job. Each page covers one ar
 | Three.js music video (deterministic frames, Chrome → ffmpeg) | `threejs-music-video` + `lyric-beat-analysis`, `camera-motion`, `lyric-staging`, `toon-look` |
 | Vox-style paper explainer short with voice-over | `paper-vox-short` |
 | Infographics-Show-style 16:9 cartoon explainer (talking puppets, bubbles, stat pills, charts) from voice + script | `cartoon-explainer` |
+| Kurzgesagt / Star Birds-grade vivid semi-3D science look (glows, volume-shaded vector, bokeh depth, critter cast) | `kurz-look` (timing from `cartoon-explainer`) |
 | Store screenshots / boards / header image | this playbook (`STORE-ASSETS.md`) + the project's own board page |
 
 ## First five minutes of any job

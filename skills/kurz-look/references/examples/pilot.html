@@ -1,0 +1,264 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Kurz-look pilot</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Avenir Next","Montserrat","Nunito",sans-serif}
+#wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;flex-shrink:0;width:1920px;height:1080px;overflow:hidden;transform-origin:center;background:#050029}
+#stage svg{position:absolute;inset:0;width:1920px;height:1080px}
+.pill{position:absolute;left:50%;top:880px;transform:translateX(-50%);padding:18px 46px;border-radius:999px;background:#0E0A3A;box-shadow:0 0 0 5px #2EE6FF,0 0 40px rgba(46,230,255,.35);color:#fff;font-weight:700;font-size:44px;letter-spacing:.5px;white-space:nowrap;opacity:0}
+#hud{position:fixed;left:0;right:0;bottom:0;display:flex;gap:12px;align-items:center;padding:8px 14px;background:rgba(0,0,0,.6);color:#fff;font:13px monospace;z-index:9}
+#hud input{flex:1}
+body.render #hud{display:none}
+</style></head>
+<body>
+<div id="wrap"><div id="stage">
+<svg id="sv" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+<div class="pill" id="pillA">A tiny world, lit from within</div>
+<div class="pill" id="pillB" style="top:90px">Original cast · Kurz-look test</div>
+<div id="flash" style="position:absolute;inset:0;background:#BFF4FF;opacity:0;pointer-events:none"></div>
+</div></div>
+<div id="hud"><button id="pp">play</button><span id="tc">0.00</span><input id="scr" type="range" min="0" max="12" step="0.0166667" value="0"></div>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/CustomEase.min.js"></script>
+<script src="vendor/CustomBounce.min.js"></script>
+<script src="vendor/CustomWiggle.min.js"></script>
+<script>
+gsap.registerPlugin(CustomEase, CustomBounce, CustomWiggle);
+CustomBounce.create("thud",{strength:.55,squash:2.2,squashID:"thud-squash"});
+CustomWiggle.create("settle",{wiggles:4,type:"easeOut"});
+
+const DUR=12, CUT=6.5, NS="http://www.w3.org/2000/svg";
+const sv=document.getElementById('sv');
+let uid=0; const id=p=>p+(++uid);
+function el(tag,a,parent){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);(parent||sv).appendChild(e);return e}
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const defs=el('defs',{});
+
+function blob(r,cx,cy,R,n,j){const p=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2,rr=R*(1-j/2+j*r());p.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr])}
+  let d=`M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;for(let i=0;i<n;i++){const p0=p[(i-1+n)%n],p1=p[i],p2=p[(i+1)%n],p3=p[(i+2)%n];
+  d+=`C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`}return d+'Z'}
+const circ=(cx,cy,r)=>`M${cx-r},${cy}a${r},${r} 0 1,0 ${2*r},0a${r},${r} 0 1,0 ${-2*r},0Z`;
+
+// Flat-glow shading: rim sliver, shadow crescent, base, light cap. Light from top-left.
+function shaded(g,{d,cx,cy,r,base,shade,light,rim,lx=-1,ly=-1}){
+  const c=id('c');const cp=el('clipPath',{id:c},defs);el('path',{d},cp);
+  const s=el('g',{'clip-path':`url(#${c})`},g);
+  el('path',{d,fill:rim||shade},s);
+  if(rim)el('path',{d,fill:shade,transform:`translate(${lx*r*.06},${ly*r*.06})`},s);
+  el('path',{d,fill:base,transform:`translate(${lx*r*.2},${ly*r*.2})`},s);
+  if(light)el('path',{d,fill:light,transform:`translate(${cx+lx*r*.42},${cy+ly*r*.46}) scale(.42) translate(${-cx},${-cy})`,opacity:.9},s);
+  return s}
+function glow(g,x,y,r,cols,blend='screen'){const G=el('g',{style:`mix-blend-mode:${blend}`},g);
+  const k=[7,4.2,2.6,1.6,1],o=[.05,.1,.2,.45,1];k.forEach((m,i)=>el('circle',{cx:x,cy:y,r:r*m,fill:cols[Math.min(i,cols.length-1)],opacity:o[i]},G));return G}
+function glint(g,x,y,s,cols){const G=el('g',{transform:`translate(${x},${y})`},g);const L=el('g',{style:'mix-blend-mode:screen'},G);
+  el('polygon',{points:`0,${-s*9} ${s*.5},0 0,${s*9} ${-s*.5},0`,fill:cols[1],opacity:.8},L);
+  el('polygon',{points:`${-s*7},0 0,${s*.45} ${s*7},0 0,${-s*.45}`,fill:cols[1],opacity:.8},L);
+  glow(G,0,0,s,[cols[2],cols[2],cols[1],cols[0],'#fff']);return G}
+function layer(parent,depth){const g=el('g',{},parent);g._d=depth;return g}
+
+// ---------- Original character "Momo": pear critter, big eyes, glowing antenna ----------
+function momo(parent,P){
+  const root=el('g',{},parent), pose=el('g',{},root), idle=el('g',{},pose);
+  const C=Object.assign({body:'#FF7E5F',shade:'#D9466B',light:'#FFC59A',rim:'#FFE3B8',limb:'#E8556A',eye:'#1B0B4A',bulb:'#7CF8FF'},P);
+  const legs=[el('path',{fill:'none',stroke:C.limb,'stroke-width':13,'stroke-linecap':'round'},idle),el('path',{fill:'none',stroke:C.limb,'stroke-width':13,'stroke-linecap':'round'},idle)];
+  const arms=[el('path',{fill:'none',stroke:C.limb,'stroke-width':12,'stroke-linecap':'round'},idle),el('path',{fill:'none',stroke:C.limb,'stroke-width':12,'stroke-linecap':'round'},idle)];
+  const hands=[el('circle',{r:11,fill:C.body},idle),el('circle',{r:11,fill:C.body},idle)];
+  const ant=el('path',{fill:'none',stroke:C.limb,'stroke-width':7,'stroke-linecap':'round'},idle);
+  const bulbG=el('g',{},idle); glow(bulbG,0,0,9,['#00B7FF','#17F0FF','#9EFAFF','#E8FFFF','#fff']);
+  const body=el('g',{},idle);
+  const d='M0,-78C46,-78 72,-40 74,4C76,52 44,78 0,78C-44,78 -76,52 -74,4C-72,-40 -46,-78 0,-78Z';
+  shaded(body,{d,cx:0,cy:0,r:78,base:C.body,shade:C.shade,light:C.light,rim:C.rim,lx:-1,ly:-1});
+  el('ellipse',{cx:0,cy:38,rx:38,ry:28,fill:C.light,opacity:.45},body);
+  const eyes=el('g',{},body), pup=[];
+  [-27,27].forEach(x=>{el('circle',{cx:x,cy:-16,r:24,fill:'#fff'},eyes);const p=el('g',{},eyes);el('circle',{cx:x,cy:-16,r:12.5,fill:C.eye},p);el('circle',{cx:x-4,cy:-21,r:4.2,fill:'#fff'},p);pup.push(p)});
+  el('ellipse',{cx:-46,cy:10,rx:10,ry:6,fill:'#FF4F8B',opacity:.45},body);el('ellipse',{cx:46,cy:10,rx:10,ry:6,fill:'#FF4F8B',opacity:.45},body);
+  el('path',{d:'M-10,14 Q0,23 10,14',fill:'none',stroke:C.eye,'stroke-width':5,'stroke-linecap':'round'},body);
+  const helmet=el('g',{},idle);
+  el('circle',{cx:0,cy:-4,r:112,fill:'#9EFAFF',opacity:.09},helmet);
+  el('circle',{cx:0,cy:-4,r:112,fill:'none',stroke:'#BFF8FF','stroke-width':5,opacity:.55},helmet);
+  el('path',{d:'M-84,-52 A100,100 0 0,1 -30,-100',fill:'none',stroke:'#fff','stroke-width':9,'stroke-linecap':'round',opacity:.75},helmet);
+  el('circle',{cx:-18,cy:-104,r:5,fill:'#fff',opacity:.75},helmet);
+  const o={root,pose,idle,helmet,eyes,wave:0,look:[0,0],space:true};
+  o.update=(t,ph=0)=>{
+    const bob=Math.sin(t*2.1+ph)*6, sway=Math.sin(t*1.3+ph)*3;
+    idle.setAttribute('transform',`translate(0,${o.space?bob:0}) rotate(${o.space?sway:sway*.4})`);
+    const sh=[[-66,12],[66,12]];
+    sh.forEach((s,i)=>{const sgn=i?1:-1;let a=(i?20:160)+Math.sin(t*2.4+ph+i)*8;
+      if(i===1&&o.wave>0){a=-60+Math.sin(t*14)*28*o.wave+ (1-o.wave)*80}
+      const rad=a*Math.PI/180,L=58,hx=s[0]+Math.cos(rad)*L,hy=s[1]+Math.sin(rad)*L,mx=s[0]+Math.cos(rad)*L*.5+sgn*8,my=s[1]+Math.sin(rad)*L*.5+10;
+      arms[i].setAttribute('d',`M${s[0]},${s[1]}Q${mx},${my} ${hx},${hy}`);hands[i].setAttribute('cx',hx);hands[i].setAttribute('cy',hy)});
+    [-28,28].forEach((x,i)=>{const k=o.space?Math.sin(t*1.9+ph+i*1.7)*14:0;legs[i].setAttribute('d',`M${x},62 Q${x+k*.3},88 ${x+k+(i?6:-6)},${o.space?110:104}`)});
+    const tip=[Math.sin(t*2.7+ph)*14-6,-150+Math.cos(t*2.7+ph)*4];
+    ant.setAttribute('d',`M0,-76 Q${tip[0]*.2-10},-118 ${tip[0]},${tip[1]}`);bulbG.setAttribute('transform',`translate(${tip[0]},${tip[1]}) scale(${1+Math.sin(t*5)*.12})`);
+    const blink=((t+ph)%3.3)<.13?.1:1;eyes.setAttribute('transform',`translate(0,-16) scale(1,${blink}) translate(0,16)`);
+    pup.forEach(p=>p.setAttribute('transform',`translate(${o.look[0]},${o.look[1]})`));
+  };
+  return o}
+
+// ================= SHOT A — deep space =================
+const A=el('g',{id:'A'}), camA=el('g',{},A);
+el('rect',{x:-2000,y:-2000,width:6000,height:5000,fill:'#050029'},camA);
+const rg=el('radialGradient',{id:'spaceG',cx:'.42',cy:'.45',r:'.75'},defs);
+[['0','#22126E'],['.45','#0E0745'],['1','#040022']].forEach(([o,c])=>el('stop',{offset:o,'stop-color':c},rg));
+el('rect',{x:-400,y:-300,width:2720,height:1680,fill:'url(#spaceG)'},camA);
+const R1=rng(7), starsL=[layer(camA,.15),layer(camA,.3)], stars=[];
+const starCols=['#FFFFFF','#9EFAFF','#59D0FF','#FFCB22','#FF9AD5','#B9A8FF'];
+for(let i=0;i<340;i++){const L=starsL[i%2];const s=el('circle',{cx:-300+R1()*2520,cy:-200+R1()*1480,r:(R1()<.9?.8+R1()*1.6:2.4+R1()*1.6),fill:starCols[(R1()*starCols.length)|0]},L);stars.push([s,R1()*6.28,.6+R1()*2.2])}
+const glL=layer(camA,.35), glints=[];
+[[310,190,5,['#3DBBFF','#22E5FF','#14A1FF']],[700,120,3.2,['#FF5F14','#FFCB22','#FF9500']],[1240,300,4,['#CF0075','#FF9AD5','#FF5F14']],[220,640,2.6,['#3DBBFF','#9EFAFF','#367CFF']],[1720,140,3,['#FFF4D1','#FFCB22','#FF9500']],[980,520,2.2,['#9EFAFF','#59D0FF','#367CFF']]]
+ .forEach(([x,y,s,c],i)=>glints.push([glint(glL,x,y,s,c),x,y,i]));
+// nebula wash
+const nebL=layer(camA,.2);
+[[400,300,560,'#4A22C8'],[1300,200,460,'#1B4FD8'],[900,820,640,'#5A14A0']].forEach(([x,y,r,c])=>{const gid=id('ng'),gr=el('radialGradient',{id:gid},defs);[['0',.32],['.5',.12],['1',0]].forEach(([o,a])=>el('stop',{offset:o,'stop-color':c,'stop-opacity':a},gr));el('circle',{cx:x,cy:y,r,fill:`url(#${gid})`,style:'mix-blend-mode:screen'},nebL)});
+// moon
+const moonL=layer(camA,.45);
+const moon=el('g',{},moonL);shaded(moon,{d:circ(430,420,92),cx:430,cy:420,r:92,base:'#8C7BEA',shade:'#4A33B8',light:'#C4B8FF',rim:'#B8A2FF',lx:-1,ly:-1});
+const R2=rng(11);for(let i=0;i<9;i++){const a=R2()*6.28,rr=R2()*62,x=430+Math.cos(a)*rr,y=420+Math.sin(a)*rr,r=5+R2()*12;el('circle',{cx:x,cy:y,r,fill:'#5B42C4',opacity:.7},moon);el('circle',{cx:x-r*.25,cy:y-r*.25,r:r*.75,fill:'#7563DA',opacity:.7},moon)}
+// planet
+const plL=layer(camA,.6), PX=1480, PY=1260, PR=640;
+const plG=el('g',{},plL);
+glow(plG,PX,PY,PR*.205,['#0019FF','#0026FF','#2A6AB1','#3FAFE4','#3FAFE4']).setAttribute('opacity',.55);
+el('circle',{cx:PX,cy:PY,r:PR+16,fill:'#7FE3FF',opacity:.55},plG);
+el('circle',{cx:PX,cy:PY,r:PR+7,fill:'#D1F6FF'},plG);
+const pc=id('pc');el('path',{d:circ(PX,PY,PR)},el('clipPath',{id:pc},defs));
+const plIn=el('g',{'clip-path':`url(#${pc})`},plG);
+el('circle',{cx:PX,cy:PY,r:PR,fill:'#2E7FD0'},plIn);
+el('circle',{cx:PX-120,cy:PY-140,r:PR*.85,fill:'#3FAFE4',opacity:.55},plIn);
+const cont=el('g',{},plIn), clouds=el('g',{},plIn);
+const R3=rng(23);
+for(let k=0;k<2;k++)for(let i=0;i<7;i++){const x=PX-1100+i*330+k*2310+R3()*80,y=PY-560+R3()*420,r=70+R3()*90;const g=el('g',{},cont);
+  shaded(g,{d:blob(R3,x,y,r,9,.45),cx:x,cy:y,r,base:'#16B57F',shade:'#009F79',light:'#7DE3A6'})}
+for(let k=0;k<2;k++)for(let i=0;i<9;i++){const x=PX-1150+i*257+k*2310,y=PY-600+R3()*500,w=60+R3()*110;el('rect',{x,y,width:w*2.2,height:24+R3()*14,rx:16,fill:'#E6FBFF',opacity:.92},clouds);el('rect',{x:x+30,y:y-18,width:w,height:24,rx:12,fill:'#E6FBFF',opacity:.92},clouds)}
+// terminator shadow (crescent via mask)
+const mk=id('m');const mm=el('mask',{id:mk},defs);el('rect',{x:0,y:0,width:4000,height:3000,fill:'#fff'},mm);el('circle',{cx:PX-150,cy:PY-170,r:PR*1.02,fill:'#000'},mm);
+el('circle',{cx:PX,cy:PY,r:PR,fill:'#0A0050',opacity:.62,mask:`url(#${mk})`},plIn);
+// asteroids mid
+const astL=layer(camA,.8), asts=[];const R4=rng(5);
+[[1060,700,46],[1180,560,22],[760,820,30],[1680,420,34]].forEach(([x,y,r],i)=>{const w=el('g',{},astL),g=el('g',{},w);
+  shaded(g,{d:blob(R4,0,0,r,8,.35),cx:0,cy:0,r,base:'#C2367F',shade:'#7A1E7A',light:'#FF7FB6',rim:'#FFB3D1'});
+  for(let j=0;j<3;j++)el('circle',{cx:(R4()-.5)*r,cy:(R4()-.5)*r,r:r*.13,fill:'#7A1E7A',opacity:.8},g);asts.push([w,g,x,y,i])});
+// rocket (original): capsule + fins + glowing engine + tapered trail
+const rkL=layer(camA,.55), rk=el('g',{},rkL), rkBody=el('g',{},rk);
+const tg=el('linearGradient',{id:'trailG',x1:'0',x2:'1',y1:'0',y2:'0'},defs);[['0','#17F0FF',0],['.6','#9EFAFF',.6],['1','#fff',1]].forEach(([o,c,a])=>el('stop',{offset:o,'stop-color':c,'stop-opacity':a},tg));
+el('polygon',{points:'-360,0 -40,-14 -40,14',fill:'url(#trailG)',style:'mix-blend-mode:screen'},rkBody);
+glow(rkBody,-44,0,9,['#009DFF','#17F0FF','#9EFAFF','#E8FFFF','#fff']);
+el('path',{d:'M-30,-24 L-52,-44 L-14,-26Z',fill:'#7C40FF'},rkBody);el('path',{d:'M-30,24 L-52,44 L-14,26Z',fill:'#3000CC'},rkBody);
+shaded(rkBody,{d:'M-34,-26 L30,-26 Q74,-26 86,0 Q74,26 30,26 L-34,26 Q-42,0 -34,-26Z',cx:20,cy:0,r:40,base:'#C4EBFF',shade:'#63A6FF',light:'#FFFFFF',rim:'#FF9AD5',lx:-.2,ly:-1});
+el('circle',{cx:34,cy:-2,r:11,fill:'#20008A'},rkBody);el('circle',{cx:31,cy:-5,r:5,fill:'#63CCFF'},rkBody);
+el('rect',{x:-8,y:-26,width:9,height:52,fill:'#BC40FF'},rkBody);
+// Momo in space
+const momL=layer(camA,1), momA=momo(momL,{});momA.root.setAttribute('transform','translate(820,470) scale(1.05)');
+// FG out-of-focus asteroid (DOF)
+const fgL=layer(camA,1.6), fg=el('g',{style:'filter:blur(16px)'},fgL);
+const R5=rng(3);shaded(fg,{d:blob(R5,150,980,230,9,.3),cx:150,cy:980,r:230,base:'#5A1C8A',shade:'#2A0B5E',light:'#8E44C9',rim:'#C27BFF'});
+const fg2=el('g',{style:'filter:blur(10px)'},fgL);shaded(fg2,{d:blob(R5,1830,90,120,8,.35),cx:1830,cy:90,r:120,base:'#4B1880',shade:'#250A55',light:'#7A3AB8',rim:'#B070FF'});
+// flare
+const flL=layer(camA,1.1), flare=el('g',{style:'mix-blend-mode:screen'},flL);
+[[.0,40,'#FFCB22',.5],[.35,26,'#FF5F14',.12],[.6,70,'#367CFF',.08],[.85,14,'#9EFAFF',.25],[1.15,110,'#B9A8FF',.06]].forEach(([k,r,c,o])=>el('circle',{cx:0,cy:0,r,fill:c,opacity:o,'data-k':k},flare));
+el('circle',{cx:0,cy:0,r:90,fill:'none',stroke:'#6FA8FF','stroke-width':3,opacity:.25,'data-k':.7},flare);
+
+// ================= SHOT B — planet surface at golden hour =================
+const B=el('g',{id:'B',opacity:0}), camB=el('g',{},B);
+const sg=el('linearGradient',{id:'skyG',x1:0,x2:0,y1:0,y2:1},defs);
+[['0','#2457C9'],['.42','#2FB3D6'],['.72','#B9F0C8'],['.86','#FFF09A']].forEach(([o,c])=>el('stop',{offset:o,'stop-color':c},sg));
+el('rect',{x:-400,y:-300,width:2720,height:1680,fill:'url(#skyG)'},camB);
+const sunL=layer(camB,.1);glow(sunL,1240,770,46,['#FFE27A','#FFF09A','#FFF6C8','#FFFDF0','#fff']);
+const clL=layer(camB,.2), cloudsB=[];
+function cloudB(parent,x,y,w,cap,base){const g=el('g',{},parent),c=id('cc');el('rect',{x:x-w,y:y-w,width:w*2.4,height:w},el('clipPath',{id:c},defs));
+  const s=el('g',{'clip-path':`url(#${c})`},g);const pts=[[-.6,.0,.32],[-.25,-.22,.42],[.15,-.12,.36],[.5,.02,.28],[.8,.05,.2]];
+  pts.forEach(([a,b,r])=>el('circle',{cx:x+a*w,cy:y+b*w,r:r*w,fill:cap},s));pts.forEach(([a,b,r])=>el('circle',{cx:x+a*w+6,cy:y+b*w+12,r:r*w,fill:base},s));return g}
+[[300,260,170],[900,180,120],[1500,300,200],[1950,200,140]].forEach(([x,y,w])=>cloudsB.push([cloudB(clL,x,y,w,'#FFFFFF','#CDEFF7'),x]));
+function hills(parent,y,amp,f,ph,fill,seed){const r=rng(seed);let d=`M-400,1400 L-400,${y}`;for(let x=-400;x<=2400;x+=40){d+=` L${x},${(y-amp*(.6*Math.sin(x*f+ph)+.4*Math.sin(x*f*2.3+ph*2))-r()*4).toFixed(1)}`}return el('path',{d:d+' L2400,1400Z',fill},parent)}
+const h1=layer(camB,.25);hills(h1,760,40,.004,1,'#A6E3DA',1);
+const h2=layer(camB,.4);hills(h2,800,55,.003,2.2,'#6EC6C8',2);
+function trees(parent,y0,n,seed,base,shade,light,sc){const r=rng(seed);for(let i=0;i<n;i++){const x=-300+i*(2600/n)+r()*60,y=y0+r()*30,R=(38+r()*30)*sc;
+  const g=el('g',{},parent);el('rect',{x:x-5*sc,y,width:10*sc,height:60*sc,fill:shade},g);shaded(g,{d:blob(r,x,y-R*.4,R,8,.25),cx:x,cy:y-R*.4,r:R,base,shade,light})}}
+trees(h2,800,26,9,'#3FAE9E','#2A8C8A','#7FD8BF',.8);
+const h3=layer(camB,.6);hills(h3,860,60,.0025,4,'#2A8C8A',3);trees(h3,870,18,12,'#1E7F7A','#14606A','#4FC0A0',1.15);
+const h4=layer(camB,.85);
+const near=hills(h4,905,30,.0016,.3,'#155E6E',4);
+el('ellipse',{cx:640,cy:950,rx:330,ry:70,fill:'#155E6E'},h4);el('ellipse',{cx:600,cy:915,rx:220,ry:22,fill:'#2A8C8A',opacity:.55},h4);
+// pollen motes
+const motL=layer(camB,.9), motes=[];const R6=rng(31);
+for(let i=0;i<40;i++){const c=el('circle',{r:2+R6()*3.5,fill:R6()<.5?'#FFF6C8':'#BFFFF0',opacity:.8},motL);motes.push([c,R6()*1920,500+R6()*480,R6()*6.28,.3+R6()*.8])}
+const momLB=layer(camB,1), momBpos=el('g',{},momLB), momB=momo(momBpos,{});momB.space=false;
+momB.root.setAttribute('transform','translate(640,0) scale(1.25)');
+// dust puffs
+const dust=el('g',{},momLB), puffs=[];for(let i=0;i<7;i++){const c=el('circle',{cx:0,cy:0,r:18,fill:'#BFEFE0',opacity:0},dust);puffs.push(c)}
+// foreground silhouette branch with rim light
+const fgB=layer(camB,1.7);
+function leaf(parent,x,y,len,wid,ang,fill,rim){const d=`M0,0 C${len*.3},${-wid} ${len*.75},${-wid*.8} ${len},0 C${len*.75},${wid*.8} ${len*.3},${wid} 0,0Z`;
+  const g=el('g',{transform:`translate(${x},${y}) rotate(${ang})`},parent);el('path',{d,fill:rim,transform:'translate(-4,-7)'},g);el('path',{d,fill},g);
+  el('path',{d:`M${len*.08},0 L${len*.9},0`,fill:'none',stroke:rim,'stroke-width':3,opacity:.35},g);return g}
+const fgBr=el('g',{style:'filter:blur(2.5px)'},fgB);
+el('path',{d:'M-120,-40 C120,60 300,120 520,150 L516,166 C290,140 100,90 -130,10Z',fill:'#1B0D4E'},fgBr);
+[[60,30,260,70,10],[170,70,300,80,40],[290,105,240,62,-20],[380,128,280,72,55],[470,146,220,58,8],[120,50,220,58,-35],[330,118,200,52,85],[-20,0,300,80,70]]
+ .forEach(([x,y,l,w,a])=>leaf(fgBr,x,y,l,w,a,'#1E0F58','#6A4CE0'));
+const fgB2=layer(camB,2.1);const lf=el('g',{style:'filter:blur(12px)'},fgB2);
+for(let i=0;i<6;i++){const a=-30+i*16;el('ellipse',{cx:1780,cy:1080,rx:40,ry:230,fill:i%2?'#2B1B8F':'#3A2AB0',transform:`rotate(${a} 1780 1080)`},lf)}
+
+const flash=document.getElementById('flash'), pillA=document.getElementById('pillA'), pillB=document.getElementById('pillB');
+
+// ---------- keyed events (GSAP, paused master; seek-driven) ----------
+const tl=gsap.timeline({paused:true});
+tl.fromTo(pillA,{opacity:0,scale:.6,y:30},{opacity:1,scale:1,y:0,duration:.55,ease:'back.out(1.7)'},1.2)
+  .to(pillA,{opacity:0,scale:.9,duration:.3,ease:'back.in(1.6)'},5.2)
+  .fromTo(momA.pose,{scale:.0,rotation:-25},{scale:1,rotation:0,duration:.7,ease:'back.out(1.6)',transformOrigin:'50% 50%'},.25)
+  .to(momA,{wave:1,duration:.4,ease:'power2.out'},2.0).to(momA,{wave:0,duration:.4,ease:'power2.in'},3.7)
+  .to(momA.pose,{rotation:'+=8',duration:.8,ease:'settle',transformOrigin:'50% 50%'},4.0)
+  .to(flash,{opacity:1,duration:.32,ease:'power2.in'},CUT-.32).to(flash,{opacity:0,duration:.5,ease:'power2.out'},CUT)
+  .fromTo(momBpos,{y:-1000},{y:760,duration:1.15,ease:'thud'},7.0)
+  .fromTo(momB.pose,{scaleX:1,scaleY:1},{scaleX:1.35,scaleY:.7,duration:1.15,ease:'thud-squash',transformOrigin:'50% 100%'},7.0)
+  .to(momB,{wave:1,duration:.4,ease:'power2.out'},9.0).to(momB,{wave:0,duration:.4},11.2)
+  .fromTo(pillB,{opacity:0,scale:.6,y:30},{opacity:1,scale:1,y:0,duration:.55,ease:'back.out(1.7)'},8.6)
+  .to(pillB,{opacity:0,scale:.9,duration:.3,ease:'back.in(1.6)'},11.5);
+tl.set({},{},DUR);
+
+function cam(layers,cx,cy,s,dx,dy){layers.forEach(L=>{const k=L._d,ss=1+(s-1)*k;L.setAttribute('transform',`translate(${cx+dx*k},${cy+dy*k}) scale(${ss}) translate(${-cx},${-cy})`)})}
+const layersA=[...starsL,nebL,glL,moonL,plL,astL,rkL,momL,fgL,flL], layersB=[sunL,clL,h1,h2,h3,h4,motL,momLB,fgB,fgB2];
+
+function render(t){
+  tl.seek(t,false);
+  const inA=t<CUT; A.setAttribute('opacity',inA?1:0); B.setAttribute('opacity',inA?0:1);
+  if(inA){
+    const p=t/CUT, z=t>5.4?Math.pow(clamp((t-5.4)/1.1),2.6):0;
+    cam(layersA,960,540,1+.07*ease(p),-60*ease(p),-20*ease(p));
+    camA.setAttribute('transform',`translate(1300,640) scale(${1+z*5.5}) translate(-1300,-640)`);
+    stars.forEach(([s,ph,f])=>s.setAttribute('opacity',(.45+.55*Math.abs(Math.sin(t*f+ph))).toFixed(2)));
+    glints.forEach(([g,x,y,i])=>g.setAttribute('transform',`translate(${x},${y}) rotate(${Math.sin(t*.6+i)*6}) scale(${.85+.25*Math.abs(Math.sin(t*1.7+i*2))})`));
+    cont.setAttribute('transform',`translate(${-(t*55)%2310},0)`);clouds.setAttribute('transform',`translate(${-(t*85)%2310},0)`);
+    moon.setAttribute('transform',`translate(0,${Math.sin(t*.7)*6})`);
+    asts.forEach(([w,g,x,y,i])=>{w.setAttribute('transform',`translate(${x+Math.sin(t*.5+i)*14},${y+Math.cos(t*.6+i)*10})`);g.setAttribute('transform',`rotate(${t*(i%2?14:-10)})`)});
+    const rp=clamp((t-.8)/4.6), rx=-300+rp*2500, ry=1000-rp*620-Math.sin(rp*Math.PI)*120, ang=Math.atan2(-620-Math.cos(rp*Math.PI)*120*Math.PI,2500)*180/Math.PI;
+    rk.setAttribute('transform',`translate(${rx},${ry}) rotate(${ang}) scale(${.55+rp*.2})`);
+    const fx=1720,fy=140;flare.querySelectorAll('[data-k]').forEach(c=>{const k=+c.dataset.k;c.setAttribute('cx',fx+(960-fx)*k*2);c.setAttribute('cy',fy+(540-fy)*k*2)});
+    flare.setAttribute('opacity',.7+.3*Math.sin(t*1.3));
+    momA.look=[Math.sin(t*.8)*4,Math.cos(t*.6)*3];momA.update(t);
+  }else{
+    const u=t-CUT,p=u/(DUR-CUT);
+    cam(layersB,960,700,1+.06*ease(p),-50*ease(p),0);
+    camB.setAttribute('transform',`translate(960,540) scale(${1+.35*Math.pow(1-clamp(u/1.2),3)}) translate(-960,-540)`);
+    cloudsB.forEach(([g],i)=>g.setAttribute('transform',`translate(${-u*(10+i*4)},0)`));
+    motes.forEach(([c,x,y,ph,s])=>{c.setAttribute('cx',(x+u*30*s+Math.sin(u+ph)*20)%1980);c.setAttribute('cy',y-u*18*s+Math.sin(u*1.6+ph)*12)});
+    const land=7.0+1.15*.27, du=t-land;
+    puffs.forEach((c,i)=>{if(du<0||du>1.1){c.setAttribute('opacity',0);return}const a=Math.PI*(i/(puffs.length-1)),k=1-Math.pow(1-du/1.1,3);
+      c.setAttribute('cx',640+Math.cos(a)*-170*k);c.setAttribute('cy',905-Math.sin(a)*45*k);c.setAttribute('r',10+22*k);c.setAttribute('opacity',(.85*(1-du/1.1)).toFixed(2))});
+    momB.look=u>2.6?[0,2]:[Math.sin(u*1.4)*5,-3];momB.update(t,1.3);
+  }
+}
+
+// ---------- preview harness ----------
+const stage=document.getElementById('stage'), scr=document.getElementById('scr'), tc=document.getElementById('tc'), pp=document.getElementById('pp');
+function fit(){const hud=document.body.classList.contains('render')?0:40;const s=Math.min(innerWidth/1920,(innerHeight-hud)/1080);stage.style.transform=`scale(${s})`}
+addEventListener('resize',fit);
+const q=new URLSearchParams(location.search);if(q.has('render'))document.body.classList.add('render');fit();
+let T=+q.get('t')||0, playing=false, last=0;
+window.seek=t=>{T=Math.max(0,Math.min(DUR,t));render(T);scr.value=T;tc.textContent=T.toFixed(2)};
+function loop(now){if(playing){T+=(now-last)/1000;if(T>=DUR){T=0}seek(T)}last=now;requestAnimationFrame(loop)}
+pp.onclick=()=>{playing=!playing;pp.textContent=playing?'pause':'play'};
+scr.oninput=()=>seek(+scr.value);
+addEventListener('keydown',e=>{if(e.code==='Space'){pp.click();e.preventDefault()}if(e.code==='ArrowRight')seek(T+1/60*(e.shiftKey?60:1));if(e.code==='ArrowLeft')seek(T-1/60*(e.shiftKey?60:1))});
+seek(T);requestAnimationFrame(loop);
+</script></body></html>
