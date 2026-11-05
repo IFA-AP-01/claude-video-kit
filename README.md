@@ -1,24 +1,26 @@
 # claude-video-kit
 
+Repo: https://github.com/IFA-AP-01/claude-video-kit
+
 Portable Claude Code skills and working rules for video, motion films, store screenshots and marketing visuals. Clone it on any Mac, run `./install.sh`, and every project gets the same skills and lessons.
 
 ## Contents
-| Path | What |
-|---|---|
-| `user/CLAUDE.md` | cross-project working rules, imported into `~/.claude/CLAUDE.md` |
-| `skills/video-playbook` | hub: working style, aesthetics, troubleshooting, pipeline, store specs, lessons, request/spec templates |
-| `skills/app-motion-film` | films from real simulator recordings in a 3D iPhone Duo with kinetic type; scripts + film template |
-| `skills/scenario-kinetic-film` | kinetic-type film engine: render, mix, finish, snap (see its PROVENANCE.md) |
-| `skills/threejs-music-video` | deterministic three.js music videos, Chrome → ffmpeg |
-| `skills/lyric-beat-analysis` | stems, word-level lyric alignment, beat grid |
-| `skills/camera-motion`, `lyric-staging`, `toon-look` | camera moves on the beat, lyrics as objects, toon materials |
-| `skills/paper-vox-short` | 9:16 paper-cutout explainer shorts with voice-over |
-| `skills/cartoon-explainer` | 16:9 Infographics-Show-style cartoon explainers: SVG puppets with lip-sync, bubbles, stat pills, charts (HyperFrames + GSAP) |
-| `skills/kurz-look` | Kurzgesagt / Star Birds-grade vivid semi-3D SVG look: style bible, kit.js, film template, examples |
+| Path | What | Look |
+|---|---|---|
+| `user/CLAUDE.md` | cross-project working rules, imported into `~/.claude/CLAUDE.md` |  |
+| `skills/video-playbook` | hub: working style, aesthetics, troubleshooting, pipeline, store specs, lessons, request/spec templates | <img src="docs/img/video-playbook.jpg" width="240"> |
+| `skills/app-motion-film` | films from real simulator recordings in a 3D iPhone Duo with kinetic type; scripts + film template | <img src="docs/img/app-motion-film.jpg" width="240"> |
+| `skills/scenario-kinetic-film` | kinetic-type film engine: render, mix, finish, snap (see its PROVENANCE.md) | <img src="docs/img/scenario-kinetic-film.jpg" width="240"> |
+| `skills/threejs-music-video` | deterministic three.js music videos, Chrome → ffmpeg | <img src="docs/img/threejs-music-video.jpg" width="240"> |
+| `skills/lyric-beat-analysis` | stems, word-level lyric alignment, beat grid | <img src="docs/img/lyric-beat-analysis.jpg" width="240"> |
+| `skills/camera-motion`, `lyric-staging`, `toon-look` | camera moves on the beat, lyrics as objects, toon materials | <img src="docs/img/toon-look.jpg" width="240"> |
+| `skills/paper-vox-short` | 9:16 paper-cutout explainer shorts with voice-over | <img src="docs/img/paper-vox-short.jpg" width="110"> |
+| `skills/cartoon-explainer` | 16:9 Infographics-Show-style cartoon explainers: SVG puppets with lip-sync, bubbles, stat pills, charts (HyperFrames + GSAP) | <img src="docs/img/cartoon-explainer.jpg" width="240"> |
+| `skills/kurz-look` | Kurzgesagt / Star Birds-grade vivid semi-3D SVG look: style bible, kit.js, film template, examples | <img src="docs/img/kurz-look.jpg" width="110"> |
 
 ## New machine
 ```bash
-git clone <your private repo url> ~/Desktop/Workspace/claude-video-kit
+git clone https://github.com/IFA-AP-01/claude-video-kit.git ~/Desktop/Workspace/claude-video-kit
 cd ~/Desktop/Workspace/claude-video-kit && ./install.sh
 ```
 Then restart Claude Code. `install.sh`:
